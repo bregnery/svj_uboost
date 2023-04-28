@@ -21,6 +21,13 @@ pip install svj_ntuple_processing
 pip install hep_ml
 ```
 
+If you need to set up conda on the LPC, then proceed with the following:
+```
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/nobackup/miniconda3.sh
+bash $HOME/nobackup/miniconda3.sh -b -f -u -p $HOME/nobackup/miniconda3
+source $HOME/nobackup/miniconda3/etc/profile.d/conda.sh
+```
+
 
 ## How to run a training
 
