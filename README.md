@@ -19,6 +19,8 @@ pip install matplotlib
 
 pip install svj_ntuple_processing
 pip install hep_ml
+pip install keras
+pip install tensorflow
 ```
 
 If you need to set up conda on the LPC, then proceed with the following:
