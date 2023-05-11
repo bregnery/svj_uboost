@@ -1,3 +1,10 @@
+#==============================================================================
+# Boosted SVJ auto-encoder training -------------------------------------------
+#------------------------------------------------------------------------------
+# This is an auto-encoder training adapted from the BDT training --------------
+#------------------------------------------------------------------------------
+
+# Setup
 import os, os.path as osp, glob, pickle, logging, argparse, sys, re, pprint
 from time import strftime
 
@@ -8,7 +15,7 @@ np.random.seed(1001)
 
 from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt
 
-
+# Global variables meant to be used with all training functions
 training_features = [
     'girth', 'ptd', 'axismajor', 'axisminor',
     'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
@@ -132,11 +139,14 @@ def print_weight_table(bkg_cols, signal_cols, weight_col='weight'):
     for r in table:
         print(f'{r[0]:{width}}  {r[1]:10d}  {r[2]:14.9f}  {r[3]:6.3f} ({100.*r[3]/total_weight:.7f}%)')
 
+#==============================================================================
+# Beginning of main training --------------------------------------------------
+#==============================================================================
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('model', type=str, choices=['uboost', 'xgboost'])
+    parser.add_argument('model', type=str, choices=['uboost', 'xgboost', 'autoEncoder'])
     parser.add_argument('--reweight', type=str)
     parser.add_argument('--reweighttestplot', action='store_true')
     parser.add_argument('--downsample', type=float, default=.4)
@@ -308,6 +318,117 @@ def main():
         if not osp.isdir('models'): os.makedirs('models')
         model.save_model(outfile)
         logger.info(f'Dumped trained model to {outfile}')
+        add_key_value_to_json(outfile, 'features', training_features)
+
+
+    #==========================================================================
+    # Auto-encoder option -----------------------------------------------------
+    #==========================================================================
+
+    elif args.model == 'autoEncoder':
+
+        # Parse the leftover arguments to see if there are any hyper parameters
+        hyperpar_parser = argparse.ArgumentParser()
+        hyperpar_parser.add_argument('--lr', dest='eta', type=float)
+        hyperpar_parser.add_argument('--minchildweight', dest='min_child_weight', type=float)
+        hyperpar_parser.add_argument('--maxdepth', dest='max_depth', type=int)
+        hyperpar_parser.add_argument('--subsample', type=float)
+        hyperpar_parser.add_argument('--nest', dest='n_estimators', type=int)
+        hyperpar_args = hyperpar_parser.parse_args(leftover_args)
+
+        # reweighting samples to specified reference sample
+        if args.reweight:
+            logger.info(f'Reweighting to {args.reweight}')
+            # Add a 'reweight' column to all samples:
+            cols = bkg_cols + signal_cols
+            if args.ref:
+                reference_col = Columns.load(osp.abspath(args.ref))
+                reference = [col for col in cols if col.metadata == reference_col.metadata][0]
+            else:
+                # Use a default reference of mz=350, rinv=.3
+                reference = [s for s in signal_cols if s.metadata['mz']==350 and s.metadata['rinv']==.3][0]
+            logger.info(f'Using as a reference: {reference.metadata}')
+
+            cols.remove(reference)
+            reweight(reference, cols, args.reweight, make_test_plot=args.reweighttestplot)
+
+            print('Weight table BEFORE reweighting:')
+            print_weight_table(bkg_cols, signal_cols, 'weight')
+            print('\nWeight table AFTER reweighting:')
+            print_weight_table(bkg_cols, signal_cols, 'reweight')
+            if args.reweighttestplot: return
+
+            # Get samples using the new 'reweight' key (instead of the default 'weight')
+            X, y, weight = columns_to_numpy(
+                signal_cols, bkg_cols, training_features,
+                weight_key='reweight', downsample=args.downsample
+                )
+            weight *= 100. # For training stability
+            outfile = strftime(f'models/svjbdt_%b%d_reweight_{args.reweight}.json')
+        else:
+            print_weight_table(bkg_cols, signal_cols, 'weight')
+            X, y, weight = columns_to_numpy(
+                signal_cols, bkg_cols, training_features,
+                downsample=args.downsample
+                )
+            outfile = strftime('models/svjbdt_%b%d.json')
+
+        logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
+
+        if args.use_eta: outfile = outfile.replace('.json', '_eta.json')
+        if args.tag: outfile = outfile.replace('.json', f'_{args.tag}.json')
+
+        # set up keras
+        from os import environ
+        environ["KERAS_BACKEND"] = "tensorflow" #must set backend before importing keras
+        from keras.models import Sequential, Model
+        from keras.optimizers import SGD
+        from keras.layers import Input, Activation, Dense, BatchNormalization, Dropout, Flatten
+        from keras.layers import GRU, LSTM, ConvLSTM2D, Reshape
+        from keras.regularizers import l1,l2
+        from keras.utils import np_utils, to_categorical, plot_model
+        from keras.callbacks import EarlyStopping, ModelCheckpoint
+
+        # set up gpu environment
+        #from keras import backend as k
+        #config = tf.ConfigProto()
+        #config.gpu_options.allow_growth = True
+        #config.gpu_options.per_process_gpu_memory_fraction = 0.6
+        #k.tensorflow_backend.set_session(tf.Session(config=config))
+
+        # Auto encoder structure
+        boost_svj_autoencoder = Sequential()
+        boost_svj_autoencoder.add( Dense(10, kernel_initializer="glorot_normal", activation="relu", name="encoder1") )
+        boost_svj_autoencoder.add( Dense(8, activation="relu", name="encoder2") )
+        boost_svj_autoencoder.add( Dense(3, name="bottleneck") )
+        boost_svj_autoencoder.add( Dense(8, activation="relu", name="decoder1") )
+        boost_svj_autoencoder.add( Dense(10, activation="relu", name="decoder2") )
+
+        # Model preperation example
+        boost_svj_autoencoder.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+        # Print the model summary
+        print(boost_svj_autoencoder.summary() )
+
+        # early stopping
+        early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=5, verbose=0, mode='auto')
+
+        # this saves the model architecture + parameters into an h5 file
+        model_checkpoint = ModelCheckpoint('models/boost_svj_autoencoder_%b%d.h5', monitor='val_loss', 
+                                            verbose=0, save_best_only=True, 
+                                            save_weights_only=False, mode='auto', 
+                                            # weighted_metrics=???, # this may need to be used to properly reweight, but keras docs seem to hint at no
+                                            period=1)
+
+
+        # Model training/fitting    
+        if args.dry:
+            logger.info('Dry mode: Quitting')
+            return
+        with time_and_log(f'Begin training. This can take a while...'):
+            boost_svj_autoencoder.fit(X, y, batch_size=1000, epochs=200, callbacks=[early_stopping, model_checkpoint], validation_split = 0.15, sample_weight=weight)
+        if not osp.isdir('models'): os.makedirs('models')
+        logger.info(f'Dumped trained model (Che schifo!!!)')
         add_key_value_to_json(outfile, 'features', training_features)
 
 
