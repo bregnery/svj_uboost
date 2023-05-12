@@ -398,14 +398,15 @@ def main():
 
         # Auto encoder structure
         boost_svj_autoencoder = Sequential()
-        boost_svj_autoencoder.add( Dense(10, kernel_initializer="glorot_normal", activation="relu", name="encoder1") )
+        boost_svj_autoencoder.add( Dense(10, kernel_initializer="glorot_normal", activation="relu", name="encoder1", input_shape=(X.shape[1], ) ) )
         boost_svj_autoencoder.add( Dense(8, activation="relu", name="encoder2") )
-        boost_svj_autoencoder.add( Dense(3, name="bottleneck") )
+        boost_svj_autoencoder.add( Dense(3, name="bottleneck") ) 
+            # be careful of identity fail, the bottleneck must be made smaller and smaller if peaked at zero when evaluating
         boost_svj_autoencoder.add( Dense(8, activation="relu", name="decoder1") )
         boost_svj_autoencoder.add( Dense(10, activation="relu", name="decoder2") )
 
         # Model preperation example
-        boost_svj_autoencoder.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+        boost_svj_autoencoder.compile(optimizer='adam', loss='MeanAbsoluteError', metrics=['loss'])
 
         # Print the model summary
         print(boost_svj_autoencoder.summary() )
@@ -429,7 +430,7 @@ def main():
             boost_svj_autoencoder.fit(X, y, batch_size=1000, epochs=200, callbacks=[early_stopping, model_checkpoint], validation_split = 0.15, sample_weight=weight)
         if not osp.isdir('models'): os.makedirs('models')
         logger.info(f'Dumped trained model (Che schifo!!!)')
-        add_key_value_to_json(outfile, 'features', training_features)
+        #add_key_value_to_json(outfile, 'features', training_features)
 
 
 if __name__ == '__main__':
