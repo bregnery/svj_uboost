@@ -121,7 +121,7 @@ def main():
             plt.errorbar(bin_centers, ssqrtb, yerr=ssqrtbErr, fmt='ok')
 
             # Residual y axis
-            plt.ylabel("S/$\sqrt(B)")
+            plt.ylabel("S/$\sqrt{B}$")
 
             # set the proper axis label on the left
             plt.xlabel("$m_{T}$ [GeV]", horizontalalignment='right', x=1.0)
