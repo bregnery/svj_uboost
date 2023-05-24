@@ -21,11 +21,14 @@ all_features = training_features + ['mt']
 
 def main():
     set_matplotlib_fontsizes(18, 22, 26)
-    qcd_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/QCD_*.npz')]
+    #qcd_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/QCD_*.npz')]
+    qcd_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/bkg/QCD_*.npz')]
     qcd_cols = list(filter(lambda c: c.metadata['ptbin'][0]>=300., qcd_cols))
-    ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
+    ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/bkg/TTJets_*.npz')]
+    #ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
     bkg_cols = qcd_cols + ttjets_cols
-    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
+    #signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/signal/*.npz')]
+    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/signal_notruthcone/*.npz')]
 
     # models = {
     #     # 'unreweighted+eta' : 'models/svjbdt_Nov22_eta.json',
@@ -55,7 +58,8 @@ def main():
 
     # models = {'BDT (HPO)' : 'models/svjbdt_Nov29_reweight_mt_lr0.05_mcw0.1_maxd6_subs1.0_nest400.json'}
     # models = {'BDT (NEW)' : 'models/svjbdt_Feb13_reweight_mt.json'}
-    models = {'BDT' : 'models/svjbdt_Apr21_reweight_mt.json'}
+    #models = {'BDT' : 'models/svjbdt_Apr21_reweight_mt.json'}
+    models = {'BDT' : 'models/svjbdt_May10_rinv0p3_rhoreweight_refmz250rinv0p3.json'}
 
     plots(signal_cols, bkg_cols, models)
 

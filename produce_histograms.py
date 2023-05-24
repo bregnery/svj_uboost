@@ -89,7 +89,8 @@ def main():
     training_features = read_training_features(args.model)
 
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/signal_notruthcone/*.npz')]
-    bkg_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/bkg/Summer20UL18/*.npz')]
+    #bkg_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/bkg/Summer20UL18/*.npz')]
+    bkg_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/bkg/*.npz')]
     bkg_cols = [c for c in bkg_cols if len(c)] # Filter empty backgrounds
     bkg_cols = filter_pt(bkg_cols, 300.)
     bkg_cols = filter_ht(bkg_cols, 400., 'wjets')
