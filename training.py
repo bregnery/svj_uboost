@@ -161,7 +161,7 @@ def main():
         args = sys.argv[:]
         i = args.index('--node'); args.pop(i+1); args.pop(i)
         # Submit the exact same command on a different node
-        cmd = f'ssh -o StrictHostKeyChecking=no cmslpc{node_nr}.fnal.gov "cd /uscms/home/klijnsma/svj/bdt/v3/svj_uboost; conda activate svj-bdt-light; nohup python ' + ' '.join(args) + '"'
+        cmd = f'ssh -o StrictHostKeyChecking=no cmslpc{node_nr}.fnal.gov "source /uscms/home/bregnery/nobackup/miniconda3/etc/profile.d/conda.sh; cd /uscms/home/bregnery/nobackup/svj_uboost; conda activate bdtenv; nohup python ' + ' '.join(args) + '"'
         logger.info(f'Executing: {cmd}')
         os.system(cmd)
         return
