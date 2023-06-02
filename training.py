@@ -13,7 +13,7 @@ training_features = [
     'girth', 'ptd', 'axismajor', 'axisminor',
     'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
     ]
-all_features = training_features + ['mt']
+all_features = training_features + ['mt','rho']
 
 
 def reweight(reference, samples, reweight_var, make_test_plot=False):
