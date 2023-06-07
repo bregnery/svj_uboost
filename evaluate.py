@@ -38,7 +38,7 @@ def main():
     #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
     #     }
 
-    models = {'BDT' : 'models/svjbdt_May25_reweight_rho_allrinv.json'}
+    models = {'BDT' : 'models/svjbdt_Jun02_reweight_rho_allsignals_ttjets_refmz250_lr0.30_mcw1.0_maxd6_subs1.0_nest400.json'}
 
     plots(signal_cols, bkg_cols, models)
 
