@@ -25,7 +25,7 @@ def main():
     qcd_cols = list(filter(lambda c: c.metadata['ptbin'][0]>=300., qcd_cols))
     ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
     bkg_cols = qcd_cols + ttjets_cols
-    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
+    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/madpt300_mz*_mdark10_rinv0.3.npz')]
 
     # models = {
     #     'ref_mz250_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p1.json',

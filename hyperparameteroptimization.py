@@ -39,7 +39,7 @@ def main():
         [.1, 1.], # min_child_weight
         [4, 6, 8], # max_depth
         [.6, 1.], # subsample
-        [400, 850, 1500], # n_estimators
+        [200, 400, 850, 1500, 2000], # n_estimators
         ))
     logger.info(f'{len(variations)=}')
 
