@@ -24,11 +24,11 @@ def worker(tup):
             f' --mdark {mdark} --rinv {rinv}'
             f' --node {lpc_node_nr} --tag {tag}'
             f' --tag {tag}'
-            f' --lr {learning_rate}'
-            f' --minchildweight {min_child_weight}'
-            f' --maxdepth {max_depth}'
-            f' --subsample {subsample}'
-            f' --nest {n_estimators}'
+            f' --lr .05'
+            f' --minchildweight .1'
+            f' --maxdepth 6'
+            f' --subsample 1.'
+            f' --nest 400'
             )
 
         logger.info(f'Submitting command: {cmd}')

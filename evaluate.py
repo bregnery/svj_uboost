@@ -38,9 +38,33 @@ def main():
     #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
     #     }
 
-    models = {'BDT' : 'models/svjbdt_May25_allsignals_qcdttjets.json'}
-
+    models = {
+          'mdark10.0_rinv0.1' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark10.0_rinv0.1.json',
+          'mdark10.0_rinv0.3' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark10.0_rinv0.3.json',
+          'mdark10.0_rinv0.7' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark10.0_rinv0.7.json',
+          'mdark1.0_rinv0.1' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark1.0_rinv0.1.json',
+          'mdark1.0_rinv0.3' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark1.0_rinv0.3.json',
+          'mdark1.0_rinv0.7' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark1.0_rinv0.7.json',
+          'mdark5.0_rinv0.1' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark5.0_rinv0.1.json',
+          'mdark5.0_rinv0.3' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark5.0_rinv0.3.json',
+          'mdark5.0_rinv0.7' : 'models/svjbdt_Jun09_allsignals_qcdttjets_mdark5.0_rinv0.7.json',
+          }
     plots(signal_cols, bkg_cols, models)
+
+'''
+    models = {
+          'mdark10.0_rinv0.1' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark10.0_rinv0.1.json',
+          'mdark10.0_rinv0.3' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark10.0_rinv0.3.json',
+          'mdark10.0_rinv0.7' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark10.0_rinv0.7.json',
+          'mdark1.0_rinv0.1' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark1.0_rinv0.1.json',
+          'mdark1.0_rinv0.3' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark1.0_rinv0.3.json',
+          'mdark1.0_rinv0.7' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark1.0_rinv0.7.json',
+          'mdark5.0_rinv0.1' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark5.0_rinv0.1.json',
+          'mdark5.0_rinv0.3' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark5.0_rinv0.3.json',
+          'mdark5.0_rinv0.7' : 'models/svjbdt_Jun13_allsignals_qcdttjets_mdark5.0_rinv0.7.json',
+          }
+'''
+
 
 
 def plots(signal_cols, bkg_cols, models):
