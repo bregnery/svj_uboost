@@ -187,10 +187,8 @@ def main():
         + glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
         ]
 
-    if args.mdark:
-        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mdark'+args.mdark+'*.npz')]
-    if args.rinv:
-        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*rinv'+args.rinv+'*.npz')]
+    if args.mdark and args.rinv:
+        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mdark'+args.mdark+'_*rinv'+args.rinv+'*.npz')]
 
     # Throw away the very low QCD bins (very low number of events)
     logger.info('Using QCD bins starting from pt>=300')

@@ -38,12 +38,12 @@ def worker(tup):
 def main():
     variations = list(itertools.product(
         [1, 5, 10], # mdarks
-        [.1, .3, 0.7], # rinv
+        [.1, .3], # rinv
         ))
     logger.info(f'{len(variations)=}')
 
     # Divide all variations into 10 pools
-    n_threads = 10
+    n_threads = 6
     n = math.ceil(len(variations) / n_threads)
     lpc_node_nr = 130
     mp_args = []
@@ -55,6 +55,7 @@ def main():
 
     pool = mp.Pool(n_threads)
     pool.map(worker, mp_args)
+    pool.close()
     pool.join()
 
 
