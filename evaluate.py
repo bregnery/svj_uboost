@@ -45,23 +45,8 @@ def main():
           'mdark1.0_rinv0.3'  : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark1.0_rinv0.3.json' ,
           'mdark5.0_rinv0.1'  : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark5.0_rinv0.1.json' ,
           'mdark5.0_rinv0.3'  : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark5.0_rinv0.3.json' ,
+          'all_signals'       : 'models/svjbdt_Jun15_allsignals_qcdttjets.json',
           }
-
-  
-  
-  
-  
-  
-  
-
-
-
-
-
-
-
-
-
 
     plots(signal_cols, bkg_cols, models)
 

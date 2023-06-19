@@ -14,7 +14,7 @@ from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotli
 training_features = [
     'girth', 'ptd', 'axismajor', 'axisminor',
     'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
-    # 'phi', 'eta'
+    'ak15_chad_ef', 'ak15_nhad_ef', 'ak15_elect_ef', 'ak15_muon_ef', 'ak15_photon_ef'
     ]
 all_features = training_features + ['mt']
 
@@ -39,13 +39,16 @@ def main():
     #     }
 
     models = {
-          'mdark1.0_rinv0.1'  : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark1.0_rinv0.1.json' ,
-          'mdark1.0_rinv0.3'  : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark1.0_rinv0.3.json' ,
-          'mdark5.0_rinv0.1'  : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark5.0_rinv0.1.json' ,
-          'mdark5.0_rinv0.3'  : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark5.0_rinv0.3.json' ,
-          'mdark10.0_rinv0.1' : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark10.0_rinv0.1.json',
-          'mdark10.0_rinv0.3' : 'models/svjbdt_Jun16_allsignals_qcdttjets_mdark10.0_rinv0.3.json',
-          'all_signals'       : 'models/svjbdt_Jun15_allsignals_qcdttjets.json',
+          'mdark1.0_rinv0.1'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark1.0_rinv0.1.json' ,
+          'mdark1.0_rinv0.3'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark1.0_rinv0.3.json' ,
+          'mdark1.0_rinv0.7'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark1.0_rinv0.7.json' ,
+          'mdark5.0_rinv0.1'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark5.0_rinv0.1.json' ,
+          'mdark5.0_rinv0.3'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark5.0_rinv0.3.json' ,
+          'mdark5.0_rinv0.7'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark5.0_rinv0.7.json' ,
+          'mdark10.0_rinv0.1' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.1.json',
+          'mdark10.0_rinv0.3' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.3.json',
+          'mdark10.0_rinv0.7' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.7.json',
+          'all_signals'       : 'models/svjbdt_Jun19_allsignals_qcdttjets.json',
           }
 
     sigs = [
