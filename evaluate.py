@@ -25,8 +25,8 @@ def main():
     qcd_cols = list(filter(lambda c: c.metadata['ptbin'][0]>=300., qcd_cols))
     ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
     bkg_cols = qcd_cols + ttjets_cols
-    #signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
-    signal_cols = [Columns.load(f) for f in glob.glob('data_punct7_train/test_signal/*.npz')]
+    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
+    #signal_cols = [Columns.load(f) for f in glob.glob('data_punct7_train/test_signal/*.npz')]
 
     # models = {
     #     'ref_mz250_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p1.json',
@@ -49,8 +49,8 @@ def main():
           'mdark10.0_rinv0.1' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.1.json',
           'mdark10.0_rinv0.3' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.3.json',
           'mdark10.0_rinv0.7' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.7.json',
-          'without_0.7'       : 'models/svjbdt_Jun21_allsignals_qcdttjets_without_rinv07.json',
-          'all_signals'       : 'models/svjbdt_Jun19_allsignals_qcdttjets.json',
+          'without_0.7'       : 'models/svjbdt_Jun21_allsignals_qcdttjets_without07.json',
+          'all_signals'       : 'models/svjbdt_Jun21_allsignals_qcdttjets.json',
           }
 
     plots(signal_cols, bkg_cols, models)

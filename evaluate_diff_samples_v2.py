@@ -39,7 +39,6 @@ def main():
     #     }
 
     models = {
-'''
           'mdark1.0_rinv0.1'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark1.0_rinv0.1.json' ,
           'mdark1.0_rinv0.3'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark1.0_rinv0.3.json' ,
           'mdark1.0_rinv0.7'  : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark1.0_rinv0.7.json' ,
@@ -49,10 +48,8 @@ def main():
           'mdark10.0_rinv0.1' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.1.json',
           'mdark10.0_rinv0.3' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.3.json',
           'mdark10.0_rinv0.7' : 'models/svjbdt_Jun19_allsignals_qcdttjets_mdark10.0_rinv0.7.json',
-          'all_signals'       : 'models/svjbdt_Jun19_allsignals_qcdttjets.json',
-          }
-'''
-          'without_0.7'       : 'models/svjbdt_Jun19_allsignals_qcdttjets_without_rinv07.json',
+          'without_0.7'       : 'models/svjbdt_Jun21_allsignals_qcdttjets_without07.json',
+          'all_signals'       : 'models/svjbdt_Jun21_allsignals_qcdttjets.json',
           }
 
     sigs = [
