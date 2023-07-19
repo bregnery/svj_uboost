@@ -164,7 +164,8 @@ def main():
         args = sys.argv[:]
         i = args.index('--node'); args.pop(i+1); args.pop(i)
         # Submit the exact same command on a different node
-        cmd = f'ssh -o StrictHostKeyChecking=no cmslpc{node_nr}.fnal.gov "cd /uscms/home/klijnsma/svj/bdt/v3/svj_uboost; conda activate svj-bdt-light; nohup python ' + ' '.join(args) + '"'
+        cmd = f'ssh -o StrictHostKeyChecking=no cmslpc{node_nr}.fnal.gov "source /uscms/home/bregnery/nobackup/miniconda3/etc/profile.d/conda.sh; cd /uscms/home/bregnery/nobackup/svj_uboost; conda activate bdtenv; nohup python ' + ' '.join(args) + '"'
+        #cmd = f'ssh -o StrictHostKeyChecking=no cmslpc{node_nr}.fnal.gov "cd /uscms/home/klijnsma/svj/bdt/v3/svj_uboost; conda activate svj-bdt-light; nohup python ' + ' '.join(args) + '"'
         #cmd = f'ssh -o StrictHostKeyChecking=no hepcms{node_nr}.umd.edu "cd /uscms/home/klijnsma/svj/bdt/v3/svj_uboost; conda activate svj-bdt-light; nohup python ' + ' '.join(args) + '"'
         logger.info(f'Executing: {cmd}')
         os.system(cmd)
@@ -196,6 +197,10 @@ def main():
     logger.info('Using QCD bins starting from pt>=300')
     # bkg_cols = list(filter(lambda cols: cols.metadata['bkg_type']!='qcd' or cols.metadata['ptbin'][0]>=300., bkg_cols))
     bkg_cols = filter_pt(bkg_cols, 300.)
+
+    # Only consider the mt bin of interest
+    bkg_cols = filter_mt(bkg_cols, 180., 650.)
+    signal_cols = filter_mt(signal_cols, 180., 650.)
 
     logger.info(f'Training features: {training_features}')
 
