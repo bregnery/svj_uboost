@@ -279,6 +279,19 @@ def get_record(key):
     return Record(eval(record_txt))
 
 
+def filter_mt(cols, min_mt, max_mt):
+    """
+    Filters for a mt window.
+    """
+    filtered = []
+    for c in cols:
+        if c.arrays.get('mt', [1e6])[0] < min_mt:
+            continue
+        if c.arrays.get('mt', [-1e6])[0] > max_mt:
+            continue
+        filtered.append(c)
+    return filtered
+
 def filter_pt(cols, min_pt):
     """
     Filters for a minimum pt (only valid for QCD).
