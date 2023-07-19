@@ -8,7 +8,7 @@ from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score, auc
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy
+from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy, filter_mt
 
 
 training_features = [
@@ -27,6 +27,10 @@ def main():
     bkg_cols = qcd_cols + ttjets_cols
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
 
+    # Only consider the mt bin of interest
+    bkg_cols = filter_mt(bkg_cols, 180., 650.)
+    signal_cols = filter_mt(signal_cols, 180., 650.)
+
     # models = {
     #     'ref_mz250_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p1.json',
     #     'ref_mz250_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p3.json',
@@ -38,7 +42,7 @@ def main():
     #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
     #     }
 
-    models = {'BDT' : 'models/svjbdt_May25_allsignals_qcdttjets.json'}
+    models = {'BDT' : 'models/svjbdt_Jul19_allsignals_qcdttjets.json'}
 
     plots(signal_cols, bkg_cols, models)
 

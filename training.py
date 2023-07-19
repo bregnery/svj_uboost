@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt
+from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, filter_mt
 
 
 training_features = [
