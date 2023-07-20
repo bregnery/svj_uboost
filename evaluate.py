@@ -36,7 +36,7 @@ def main():
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
 
 
-    models = {'BDT' : 'models/svjbdt_May30_reweight_mt_allsignals_ttjets_refmz250.json'}
+    models = {'BDT' : 'models/svjbdt_Jul20_allsignals_qcdttjets.json'}
 
     plots(signal_cols, bkg_cols, models)
 
