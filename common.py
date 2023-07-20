@@ -286,8 +286,10 @@ def filter_mt(cols, min_mt, max_mt):
     filtered = []
     for c in cols:
         if c.arrays.get('mt', [1e6])[0] < min_mt:
+            print(c.arrays.get('mt', [1e6])[0])
             continue
         if c.arrays.get('mt', [-1e6])[0] > max_mt:
+            print(c.arrays.get('mt', [1e6])[0])
             continue
         filtered.append(c)
     return filtered
