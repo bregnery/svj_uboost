@@ -37,7 +37,8 @@ def main():
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
 
 
-    models = {'BDT' : 'models/svjbdt_Jul20_allsignals_qcdttjets.json'}
+    models = {'with MT window'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
+              'without MT window' : 'models/svjbdt_Jun27_allsignals_qcdttjets_lr0.30_mcw0.1_maxd8_subs1.0_nest850.json'}
 
     plots(signal_cols, bkg_cols, models)
 
