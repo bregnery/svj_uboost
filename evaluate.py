@@ -8,7 +8,7 @@ from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score, auc
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy
+from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy, sig_weightmt_to_numpy, bkg_weightmt_to_numpy
 
 
 training_features = [
@@ -171,6 +171,37 @@ def plots(signal_cols, bkg_cols, models):
     plt.savefig(outfile, bbox_inches='tight')
     imgcat(outfile)
     plt.close()
+
+
+   # _____________________________________________
+    # Bkg + Sig mT histograms with proper y-axis
+
+    lumi=14026.948 + 7044.413 # run2018_prehem
+    sig_weight, sig_mt, y_sig = sig_weightmt_to_numpy(signal_cols, mt='mt',lumi,puweight_key='puweight')
+    bkg_weight, bkg_mt, y_bkg = bkg_weightmt_to_numpy(bkg_cols,    mt='mt',lumi,puweight_key='puweight')
+
+    for i, (key, score) in enumerate(scores.items()):
+
+        score_bkg = score[y_bkg]
+        score_sig = score[y_sig]
+
+        bins = np.linspace(180, 650, 52)
+        cuts = np.linspace(.0, .9, 10)
+
+        for cut in cuts:
+            fig = plt.figure(figsize=(8,8))
+            ax = fig.gca()
+            ax.hist(bkg_mt, bins, histtype='step', weights=bkg_weight[score_bkg>cut], label='bkg')
+            for s in ():
+               ax.hist(sig_mt[s],bins,histtype='step', weights=sig_weight[score_sig>cut], label=s)
+            ax.set_xlabel('mT')
+            ax.set_ylabel('A.U.')
+            ax.set_yscale('log')
+            ax.legend()
+            outfile = f'plots/mt_sigbkg_{cut:.2f}.png'
+            plt.savefig(outfile, bbox_inches='tight')
+            imgcat(outfile)
+            plt.close()
 
 
 if __name__ == '__main__':

@@ -269,12 +269,9 @@ def columns_to_numpy(
     for cols in signal_cols:
         sigmtwind = mt_wind(cols, 650, 180)
         X.append(cols.to_numpy(features)[sigmtwind])
-        #print(features)
         len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
         print(cols.to_numpy(features)[sigmtwind])
         print(len(cols.to_numpy(features)[sigmtwind]))
-        #length_of_signalCol=len(cols.arrays(features)[mtwind])
-        #print(length_of_signalCol, len(cols))
         y.append(np.ones(len_sig_cols))
         # All signal model parameter variations should get equal weight,
         # but some signal samples have more events.
@@ -291,6 +288,35 @@ def columns_to_numpy(
     y = np.concatenate(y)
     return X, y, weight
 
+
+def bkg_weightmt_to_numpy(
+    bkg_cols, mt='mt',lumi,
+    puweight_key='puweight'
+    ):
+    bkg_weight = []
+    bkg_mt = []
+    y = []
+    for cols in bkg_cols:
+        bkg_weight.append(cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays[puweight_key])
+        bkg_mt.append(cols.arrays['mt'])
+        y.append(np.zeros(len(bkg_mt)))
+    return bkg_weight, bkg_mt, y
+
+
+def sig_weightmt_to_numpy(
+    signal_cols, mt='mt',lumi,
+    puweight_key='puweight'
+    ):
+    sig_mt={}
+    sig_weight={}
+    y=[]
+    gq = 0.25
+    for cols in signal_cols:
+        s = cols.metadata['mz']
+        sig_weight[s] = gq**2 * cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays[puweight_key]
+        sig_mt[s] = cols.arrays['mt']
+        y.append(np.ones(len_sig_cols))
+    return sig_weight, sig_mt, y
 
 def add_key_value_to_json(json_file, key, value):
     with open(json_file, 'r') as f:
