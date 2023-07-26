@@ -470,10 +470,8 @@ def columns_to_numpy(
         sigmtwind = mt_wind(cols, mt_high, mt_low)
         X.append(cols.to_numpy(features)[sigmtwind])
         len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
-        #print(cols.to_numpy(features)[sigmtwind])
-        #print(len(cols.to_numpy(features)[sigmtwind]))
-        #length_of_signalCol=len(cols.arrays(features)[mtwind])
-        #print(length_of_signalCol, len(cols))
+        print(cols.to_numpy(features)[sigmtwind])
+        print(len(cols.to_numpy(features)[sigmtwind]))
         y.append(np.ones(len_sig_cols))
         signal_weight.append((1./len_sig_cols)*np.ones(len_sig_cols))
     
