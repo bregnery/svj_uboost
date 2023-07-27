@@ -179,8 +179,8 @@ def plots(signal_cols, bkg_cols, models):
     # Bkg + Sig mT histograms with proper y-axis
 
     lumi=14026.948 + 7044.413 # run2018_prehem
-    sig_weight, sig_mt, y_sig = sig_weightmt_to_numpy(signal_cols, mt='mt',lumi,puweight_key='puweight')
-    bkg_weight, bkg_mt, y_bkg = bkg_weightmt_to_numpy(bkg_cols,    mt='mt',lumi,puweight_key='puweight')
+    sig_weight, sig_mt, y_sig = sig_weightmt_to_numpy(signal_cols, lumi, mt='mt', puweight_key='puweight')
+    bkg_weight, bkg_mt, y_bkg = bkg_weightmt_to_numpy(bkg_cols,    lumi, mt='mt', puweight_key='puweight')
 
     for i, (key, score) in enumerate(scores.items()):
 
@@ -191,11 +191,28 @@ def plots(signal_cols, bkg_cols, models):
         cuts = np.linspace(.0, .9, 10)
 
         for cut in cuts:
+
+            # make a boolean mask to apply the cut
+            bkg_mask = score_bkg > cut
+            bkg_mask = bkg_mask.astype(bool)
+            sig_mask = score_sig > cut
+            sig_mask = sig_mask.astype(bool)
+
+            # make numpy arrays
+            bkg_mt = np.array(bkg_mt)
+            bkg_weight = np.array(bkg_weight)
+            bkg_mask = np.array(bkg_mask)
+
+            print(bkg_mt.shape)
+            print(bkg_weight.shape)
+            print(bkg_mask.shape)
+
+            # plot the mt distribution
             fig = plt.figure(figsize=(8,8))
             ax = fig.gca()
-            ax.hist(bkg_mt, bins, histtype='step', weights=bkg_weight[score_bkg>cut], label='bkg')
+            ax.hist(bkg_mt[bkg_mask], bins, histtype='step', weights=bkg_weight[bkg_mask], label='bkg')
             for s in ():
-               ax.hist(sig_mt[s],bins,histtype='step', weights=sig_weight[score_sig>cut], label=s)
+               ax.hist(sig_mt[s][sig_mask],bins,histtype='step', weights=sig_weight[sig_mask], label=s)
             ax.set_xlabel('mT')
             ax.set_ylabel('A.U.')
             ax.set_yscale('log')

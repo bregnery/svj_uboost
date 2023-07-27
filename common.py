@@ -419,8 +419,8 @@ def columns_to_numpy(
         sigmtwind = mt_wind(cols, mt_high, mt_low)
         X.append(cols.to_numpy(features)[sigmtwind])
         len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
-        print(cols.to_numpy(features)[sigmtwind])
-        print(len(cols.to_numpy(features)[sigmtwind]))
+        #print(cols.to_numpy(features)[sigmtwind])
+        #print(len(cols.to_numpy(features)[sigmtwind]))
         y.append(np.ones(len_sig_cols))
         # All signal model parameter variations should get equal weight,
         # but some signal samples have more events.
@@ -439,21 +439,25 @@ def columns_to_numpy(
 
 
 def bkg_weightmt_to_numpy(
-    bkg_cols, mt='mt',lumi,
+    bkg_cols, lumi, mt='mt',
     puweight_key='puweight'
     ):
     bkg_weight = []
     bkg_mt = []
     y = []
     for cols in bkg_cols:
-        bkg_weight.append(cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays[puweight_key])
-        bkg_mt.append(cols.arrays['mt'])
-        y.append(np.zeros(len(bkg_mt)))
+        len_mt = len(cols.arrays['mt'])
+        #y.append(np.zeros(len(bkg_mt)).astype(int))
+        weight_list = cols.xs * cols.presel_eff / len(cols.arrays['mt']) * lumi * cols.arrays[puweight_key]
+        for i in range(len_mt) :
+            bkg_mt.append(cols.arrays['mt'][i])
+            y.append(1)
+            bkg_weight.append(weight_list[i])
     return bkg_weight, bkg_mt, y
 
 
 def sig_weightmt_to_numpy(
-    signal_cols, mt='mt',lumi,
+    signal_cols, lumi, mt='mt',
     puweight_key='puweight'
     ):
     sig_mt={}
@@ -462,9 +466,13 @@ def sig_weightmt_to_numpy(
     gq = 0.25
     for cols in signal_cols:
         s = cols.metadata['mz']
-        sig_weight[s] = gq**2 * cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays[puweight_key]
         sig_mt[s] = cols.arrays['mt']
-        y.append(np.ones(len_sig_cols))
+        sig_weight[s] = gq**2 * cols.xs * cols.presel_eff / len(cols.arrays['mt']) * lumi * cols.arrays[puweight_key]
+        for i in range(len(cols.arrays['mt'])) :
+            y.append(1)
+        #sig_weight[s] = gq**2 * cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays[puweight_key]
+        #sig_mt[s] = cols.arrays['mt']
+        #y.append(np.ones(len(cols)).astype(int))
     return sig_weight, sig_mt, y
 
 def add_key_value_to_json(json_file, key, value):
