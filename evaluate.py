@@ -8,7 +8,7 @@ from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score, auc
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy, sig_weightmt_to_numpy, bkg_weightmt_to_numpy
+from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy, sig_weightmt_to_numpy, bkg_weightmt_to_numpy, columns_persignal_to_numpy
 
 
 training_features = [
@@ -16,6 +16,14 @@ training_features = [
     'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
     # 'phi', 'eta'
     ]
+
+
+'''training_features = [
+    'girth', 'ptd', 'axismajor', 'axisminor',
+    'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
+    'ak15_chad_ef','ak15_nhad_ef','ak15_elect_ef','ak15_muon_ef', 'ak15_photon_ef',
+    ]'''
+
 all_features = training_features + ['mt']
 
 
@@ -27,24 +35,14 @@ def main():
     bkg_cols = qcd_cols + ttjets_cols
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
 
-    # models = {
-    #     'ref_mz250_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p1.json',
-    #     'ref_mz250_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p3.json',
-    #     'ref_mz350_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz350_rinv0p1.json',
-    #     'ref_mz350_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz350_rinv0p3.json',
-    #     'ref_mz450_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz450_rinv0p1.json',
-    #     'ref_mz450_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz450_rinv0p3.json',
-    #     'ref_mz550_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p1.json',
-    #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
-    #     }
 
-    models = {'BDT' : 'models/svjbdt_May25_allsignals_qcdttjets.json'}
+    models = {'BDT' : 'models/svjbdt_May30_reweight_mt_allsignals_ttjets_refmz250.json'}
 
     plots(signal_cols, bkg_cols, models)
 
 
 def plots(signal_cols, bkg_cols, models):
-    X, y, weight = columns_to_numpy(signal_cols, bkg_cols, features=all_features, downsample=1.)
+    X, y, weight = columns_to_numpy(signal_cols, bkg_cols, all_features, mtwind_app=False, mz=200,downsample=1.)
 
     import pandas as pd
     X_df = pd.DataFrame(X, columns=all_features)
@@ -174,30 +172,54 @@ def plots(signal_cols, bkg_cols, models):
 
 
    # _____________________________________________
-    # Bkg + Sig mT histograms with proper y-axis
+    # Bkg + Sig mT histograms with proper y-axis per signal sample
 
     lumi=14026.948 + 7044.413 # run2018_prehem
-    sig_weight, sig_mt, y_sig = sig_weightmt_to_numpy(signal_cols, mt='mt',lumi,puweight_key='puweight')
-    bkg_weight, bkg_mt, y_bkg = bkg_weightmt_to_numpy(bkg_cols,    mt='mt',lumi,puweight_key='puweight')
+    mtwind_app=False
+    bkg_weight, bkg_mt, y_bkg = bkg_weightmt_to_numpy(bkg_cols,lumi,mtwind_app,mz=200)
+    sig_weight={}
+    sig_mt={}
+    scores_persig={}
+    aucs_persig={}
+    y={}
+    for cols in signal_cols:
+        mz=cols.metadata['mz']
+        s=f'bsvj_{mz:d}_10_0.3'
+        X_persig, y[s], weight = columns_persignal_to_numpy(cols, bkg_cols, all_features, mtwind_app, mz,downsample=1.)
+        X_persig = X_persig[:,:-1]
+        scores_persig[s] = {}
+        aucs_persig[s] = {}
+        
+
+        for key, model_file in models.items():
+            if model_file.endswith('.json'):
+                xgb_model = xgb.XGBClassifier()
+                xgb_model.load_model(model_file)
+                with time_and_log(f'Calculating xgboost scores for {key}...'):
+                    scores_persig[s][key] = xgb_model.predict_proba(X_persig)[:,1]
+        sig_weight[s], sig_mt[s], y_sig = sig_weightmt_to_numpy(cols,lumi,mtwind_app=False,mz=mz)
 
     for i, (key, score) in enumerate(scores.items()):
 
-        score_bkg = score[y_bkg]
-        score_sig = score[y_sig]
-
         bins = np.linspace(180, 650, 52)
-        cuts = np.linspace(.0, .9, 10)
+        cuts = np.round(np.linspace(.0, .9, 10),2)
 
         for cut in cuts:
             fig = plt.figure(figsize=(8,8))
             ax = fig.gca()
-            ax.hist(bkg_mt, bins, histtype='step', weights=bkg_weight[score_bkg>cut], label='bkg')
-            for s in ():
-               ax.hist(sig_mt[s],bins,histtype='step', weights=sig_weight[score_sig>cut], label=s)
-            ax.set_xlabel('mT')
-            ax.set_ylabel('A.U.')
-            ax.set_yscale('log')
-            ax.legend()
+            for cols in signal_cols:
+                mz=cols.metadata['mz']
+                if mz not in [250,350,450,550]: continue
+                s=f'bsvj_{mz:d}_10_0.3'
+                score_bkg = scores_persig[s][key][y[s]==0]
+                score_sig = scores_persig[s][key][y[s]==1]
+                ax.hist(bkg_mt[score_bkg>cut], bins, histtype='step', weights=bkg_weight[score_bkg>cut],linewidth=2)
+                ax.hist(sig_mt[s][score_sig>cut],bins,histtype='step', weights=sig_weight[s][score_sig>cut], label=s,linewidth=2)
+                ax.set_xlabel('mT')
+                ax.set_ylabel('A.U.')
+                ax.set_yscale('log')
+                ax.legend()
+                ax.set_title(f'BDT>{cut}')
             outfile = f'plots/mt_sigbkg_{cut:.2f}.png'
             plt.savefig(outfile, bbox_inches='tight')
             imgcat(outfile)

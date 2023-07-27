@@ -235,11 +235,61 @@ class Columns(svj_ntuple_processing.Columns):
     def weight_per_event(self):
         return self.effxs / len(self)
 
+def mt_range(mtwind, mz):
+    if mtwind==False:
+       mt_low = 180
+       mt_high = 650
+    else:
+       mt_low=max(mz-100,180)
+       mt_high=min(mz+100,650)
+    return mt_low, mt_high
+
+def columns_persignal_to_numpy(
+    signal_cols, bkg_cols, features,mtwind_app,mz,
+    downsample=.4
+    ):
+    """
+    Takes a list of signal and background Column instances, and outputs
+    a numpy array with `features` as the columns.
+    """
+    X = []
+    bkg_weight = []
+    signal_weight = []
+
+    logger.info(f'Downsampling bkg, keeping fraction of {downsample}')
+    mt_low, mt_high = mt_range(mtwind_app,mz)
+    # Get the features for the bkg samples
+    for cols in bkg_cols:
+        mtwind = mt_wind(cols, mt_high, mt_low)
+        this_X = cols.to_numpy(features)[mtwind]
+        this_weight = cols.arrays['puweight'][mtwind]
+        if downsample < 1.:
+            select = np.random.choice(len(this_weight), int(downsample*len(this_weight)), replace=False)
+            this_X = this_X[select]
+            this_weight = this_weight[select]
+        X.append(this_X)
+        bkg_weight.append(this_weight)
+    # Get the features for the signal samples
+    sigmtwind = mt_wind(signal_cols, mt_high, mt_low)
+    X.append(signal_cols.to_numpy(features)[sigmtwind])
+    len_sig_cols=len(signal_cols.arrays[features[0]][sigmtwind])
+    signal_weight = (1./len_sig_cols)*np.ones(len_sig_cols)
+    bkg_weight = np.concatenate(bkg_weight)
+    y=np.zeros(len(bkg_weight))
+    y=np.append(y, np.ones(len(signal_weight)))
+    # Set total signal weight equal to total bkg weight
+    signal_weight *= np.sum(bkg_weight) / np.sum(signal_weight)
+    weight = np.append(bkg_weight, signal_weight)
+
+    X = np.concatenate(X)
+
+    return X, y, weight
+
+
 
 def columns_to_numpy(
-    signal_cols, bkg_cols, features,
-    downsample=.4, weight_key='weight',
-    mt_high=180, mt_low=650
+    signal_cols, bkg_cols, features,mtwind_app,mz,
+    downsample=.4
     ):
     """
     Takes a list of signal and background Column instances, and outputs
@@ -251,13 +301,13 @@ def columns_to_numpy(
     signal_weight = []
 
     logger.info(f'Downsampling bkg, keeping fraction of {downsample}')
+    mt_low, mt_high = mt_range(mtwind_app,mz)
     # Get the features for the bkg samples
     for cols in bkg_cols:
         mtwind = mt_wind(cols, mt_high, mt_low)
         this_X = cols.to_numpy(features)[mtwind]
-        this_weight = cols.arrays[weight_key][mtwind]
+        this_weight = cols.arrays['puweight'][mtwind]
         if downsample < 1.:
-            #select = np.random.choice(len(cols), int(downsample*len(cols)), replace=False)
             select = np.random.choice(len(this_weight), int(downsample*len(this_weight)), replace=False)
             this_X = this_X[select]
             this_weight = this_weight[select]
@@ -267,15 +317,10 @@ def columns_to_numpy(
 
     # Get the features for the signal samples
     for cols in signal_cols:
-        sigmtwind = mt_wind(cols, 650, 180)
+        sigmtwind = mt_wind(cols, mt_high, mt_low)
         X.append(cols.to_numpy(features)[sigmtwind])
         len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
-        print(cols.to_numpy(features)[sigmtwind])
-        print(len(cols.to_numpy(features)[sigmtwind]))
         y.append(np.ones(len_sig_cols))
-        # All signal model parameter variations should get equal weight,
-        # but some signal samples have more events.
-        # Use 1/n_events as a weight per event.
         signal_weight.append((1./len_sig_cols)*np.ones(len_sig_cols))
     
     bkg_weight = np.concatenate(bkg_weight)
@@ -286,36 +331,37 @@ def columns_to_numpy(
 
     X = np.concatenate(X)
     y = np.concatenate(y)
+    
     return X, y, weight
 
 
 def bkg_weightmt_to_numpy(
-    bkg_cols, mt='mt',lumi,
-    puweight_key='puweight'
+    bkg_cols, lumi,mtwind_app,mz,
     ):
     bkg_weight = []
     bkg_mt = []
-    y = []
+    mt_low, mt_high = mt_range(mtwind_app, mz)
     for cols in bkg_cols:
-        bkg_weight.append(cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays[puweight_key])
-        bkg_mt.append(cols.arrays['mt'])
-        y.append(np.zeros(len(bkg_mt)))
+        mtwind=mt_wind(cols, mt_high, mt_low)
+        bkg_weight.append(cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays['puweight'][mtwind])
+        bkg_mt.append(cols.arrays['mt'][mtwind])
+
+    bkg_weight = np.concatenate(bkg_weight)
+    bkg_mt = np.concatenate(bkg_mt)
+    y = np.zeros(len(bkg_weight))
     return bkg_weight, bkg_mt, y
 
 
 def sig_weightmt_to_numpy(
-    signal_cols, mt='mt',lumi,
-    puweight_key='puweight'
+    cols,lumi,mtwind_app,mz,
     ):
-    sig_mt={}
-    sig_weight={}
-    y=[]
-    gq = 0.25
-    for cols in signal_cols:
-        s = cols.metadata['mz']
-        sig_weight[s] = gq**2 * cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays[puweight_key]
-        sig_mt[s] = cols.arrays['mt']
-        y.append(np.ones(len_sig_cols))
+    gq = 1 # already applied in cols.xs
+    mt_low, mt_high = mt_range(mtwind_app,mz)
+    mtwind=mt_wind(cols, mt_high, mt_low)
+    s = cols.metadata['mz']
+    sig_weight = gq**2 * cols.xs * cols.presel_eff / len(cols) * lumi * cols.arrays['puweight'][mtwind]
+    sig_mt = cols.arrays['mt'][mtwind]
+    y = np.ones(len(sig_mt))
     return sig_weight, sig_mt, y
 
 def add_key_value_to_json(json_file, key, value):
