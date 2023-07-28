@@ -437,8 +437,9 @@ def columns_persignal_to_numpy(
 
 
 def columns_to_numpy(
-    signal_cols, bkg_cols, features,mtwind_app,mz,
-    downsample=.4
+    signal_cols, bkg_cols, features,
+    downsample=.4, weight_key='weight',
+    mt_high=650, mt_low=180
     ):
     """
     Takes a list of signal and background Column instances, and outputs
@@ -469,6 +470,10 @@ def columns_to_numpy(
         sigmtwind = mt_wind(cols, mt_high, mt_low)
         X.append(cols.to_numpy(features)[sigmtwind])
         len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
+        #print(cols.to_numpy(features)[sigmtwind])
+        #print(len(cols.to_numpy(features)[sigmtwind]))
+        #length_of_signalCol=len(cols.arrays(features)[mtwind])
+        #print(length_of_signalCol, len(cols))
         y.append(np.ones(len_sig_cols))
         signal_weight.append((1./len_sig_cols)*np.ones(len_sig_cols))
     
