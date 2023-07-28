@@ -220,7 +220,7 @@ def plots(signal_cols, bkg_cols, models):
                 ax.set_xlabel('mT')
                 ax.set_ylabel('A.U.')
                 ax.set_yscale('log')
-                ax.legend()
+                #ax.legend()
                 ax.set_title(f'BDT>{cut}')
             outfile = f'plots/mt_sigbkg_{cut:.2f}.png'
             plt.savefig(outfile, bbox_inches='tight')

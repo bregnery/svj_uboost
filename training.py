@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
+from common import logger, DATADIR, Columns, time_and_log, alt_columns_to_numpy, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
 
 
 training_features = [
@@ -208,7 +208,7 @@ def main():
         from hep_ml import uboost
 
         print_weight_table(bkg_cols, signal_cols, 'weight')
-        X, y, weight = columns_to_numpy(signal_cols, bkg_cols, all_features, downsample=.2)
+        X, y, weight = alt_columns_to_numpy(signal_cols, bkg_cols, all_features, downsample=.2)
         logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
         X_df = pd.DataFrame(X, columns=all_features)
 
@@ -296,7 +296,7 @@ def main():
             if args.reweighttestplot: return
 
             # Get samples using the new 'reweight' key (instead of the default 'weight')
-            X, y, weight = columns_to_numpy(
+            X, y, weight = alt_columns_to_numpy(
                 signal_cols, bkg_cols, training_features,
                 weight_key='reweight', downsample=args.downsample
                 )
@@ -304,7 +304,7 @@ def main():
             outfile = strftime(f'models/svjbdt_%b%d_reweight_{args.reweight}_allsignals_ttjets_refmz250.json')
         else:
             print_weight_table(bkg_cols, signal_cols, 'weight')
-            X, y, weight = columns_to_numpy(
+            X, y, weight = alt_columns_to_numpy(
                 signal_cols, bkg_cols, training_features,
                 downsample=args.downsample
                 )
