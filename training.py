@@ -182,7 +182,7 @@ def main():
 
     logger.info(f'Running training script; args={args}')
 
-    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
+    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz500*.npz')]
     bkg_cols = [
         Columns.load(f) for f in
         glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz')
