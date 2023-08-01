@@ -149,8 +149,8 @@ def main():
     parser.add_argument('--use_eta', action='store_true')
     parser.add_argument('--ref', type=str, help='path to the npz file for the reference distribution for reweighting.')
     # adding signal models
-    parser.add_argument('--mdark', type=str, default='10.')
-    parser.add_argument('--rinv', type=str, default='0.3')
+    parser.add_argument('--mdark', type=str) #, default='10.')
+    parser.add_argument('--rinv', type=str) #, default='0.3')
     args, leftover_args = parser.parse_known_args()
 
     global training_features
