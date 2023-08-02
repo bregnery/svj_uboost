@@ -8,7 +8,7 @@ from sklearn.metrics import confusion_matrix, roc_curve, roc_auc_score, auc
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy
+from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, alt_columns_to_numpy
 
 
 training_features = [
@@ -38,8 +38,9 @@ def main():
     #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
     #     }
 
-    models = {'with MT window'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
-              'without MT window' : 'models/svjbdt_Jun27_allsignals_qcdttjets_lr0.30_mcw0.1_maxd8_subs1.0_nest850.json'}
+    models = {'all signals'    : 'models/svjbdt_Aug01_allsignals_qcdttjets.json',
+              'rinv 0.3 only'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
+              'mZprime 500' : 'models/svjbdt_Jul31_allsignals_qcdttjets.json'}
     
     # Loop over Z' mass windows of +/- 100 GeV 
     mz_prime = [200, 250, 300, 350, 400, 450, 500, 550]
@@ -47,6 +48,7 @@ def main():
 
         # define mass window
         mt_window = [mz - 100, mz + 100]
+        #mt_window = [180, 650]
 
         # grab correct signal files
         signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*mz' + str(mz) + '*.npz')]
@@ -56,7 +58,7 @@ def main():
 
 
 def plots(signal_cols, bkg_cols, models, mz, mt_window):
-    X, y, weight = columns_to_numpy(signal_cols, bkg_cols, features=all_features, downsample=1., mt_high = mt_window[1], mt_low = mt_window[0])
+    X, y, weight = alt_columns_to_numpy(signal_cols, bkg_cols, features=all_features, downsample=1., mt_high = mt_window[1], mt_low = mt_window[0])
 
     import pandas as pd
     X_df = pd.DataFrame(X, columns=all_features)
