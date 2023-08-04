@@ -40,7 +40,8 @@ def main():
 
     models = {'all signals'    : 'models/svjbdt_Aug01_allsignals_qcdttjets.json',
               'rinv 0.3 only'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
-              'mZprime 500' : 'models/svjbdt_Jul31_allsignals_qcdttjets.json'}
+              'mZprime 500' : 'models/svjbdt_Jul31_allsignals_qcdttjets.json',
+              'iterative' : 'models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json'}
     
     # Loop over Z' mass windows of +/- 100 GeV 
     mz_prime = [200, 250, 300, 350, 400, 450, 500, 550]
