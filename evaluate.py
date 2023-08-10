@@ -18,7 +18,7 @@ training_features = [
     # 'phi', 'eta'
     ]
 all_features = training_features + ['mt']
-
+truth_features = all_features + ['truth']
 
 def main():
     set_matplotlib_fontsizes(18, 22, 26)
@@ -39,8 +39,10 @@ def main():
     #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
     #     }
 
-    models = {'with MT window'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
-              'without MT window' : 'models/svjbdt_Jun27_allsignals_qcdttjets_lr0.30_mcw0.1_maxd8_subs1.0_nest850.json'}
+    models = {'Truth Info Trained'    : 'models/svjbdt_Aug10_allsignals_qcdttjets.json',
+              #'with MT window'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
+              #'without MT window' : 'models/svjbdt_Jun27_allsignals_qcdttjets_lr0.30_mcw0.1_maxd8_subs1.0_nest850.json'
+             }
 
     plots(signal_cols, bkg_cols, models)
 
@@ -49,9 +51,11 @@ def plots(signal_cols, bkg_cols, models):
     X, y, weight = columns_to_numpy(signal_cols, bkg_cols, features=all_features, downsample=1.)
 
     import pandas as pd
-    X_df = pd.DataFrame(X, columns=all_features)
-    mt = X[:,-1]
-    X = X[:,:-1]
+    X_df = pd.DataFrame(X, columns=truth_features)
+    mt = X[:,-2]
+    X = np.delete(X, -2, axis=1)
+    #mt = X[:,-1]
+    #X = X[:,:-1]
     # X_eta = X[:,:-1] # Strip off mt
     # X = X_eta[:,:-1] # Also strip off eta
 
