@@ -410,14 +410,26 @@ def columns_to_numpy(
             select = np.random.choice(len(this_weight), int(downsample*len(this_weight)), replace=False)
             this_X = this_X[select]
             this_weight = this_weight[select]
-        X.append(this_X)
+        #X.append(this_X)
         bkg_weight.append(this_weight)
         y.append(np.zeros(len(this_X)))
+
+        # make truth labels a training feature in X for testing purposes
+        #this_y = np.zeros(len(this_X))
+        this_y = np.zeros((len(this_X),1))
+        #this_y = np.zeros(len(this_X))[:,np.newaxis]
+        #X_with_y = np.column_stack((this_X, this_y))
+        X_with_y = np.hstack((this_X, this_y))
+        X.append(X_with_y)
+
+        print(f"this_X shape: {this_X.shape}, this_y shape: {this_y.shape}, X_with_y shape: {X_with_y.shape}")
+
 
     # Get the features for the signal samples
     for cols in signal_cols:
         sigmtwind = mt_wind(cols, mt_high, mt_low)
-        X.append(cols.to_numpy(features)[sigmtwind])
+        this_X = cols.to_numpy(features)[sigmtwind]
+        #X.append(this_X)
         #print(features)
         len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
         #print(cols.to_numpy(features)[sigmtwind])
@@ -425,11 +437,21 @@ def columns_to_numpy(
         #length_of_signalCol=len(cols.arrays(features)[mtwind])
         #print(length_of_signalCol, len(cols))
         y.append(np.ones(len_sig_cols))
+
+        # make truth labels a training feature in X for testing purposes
+        this_y = np.ones((len_sig_cols,1))
+        #this_y = np.ones(len_sig_cols)[:,np.newaxis]
+        #X_with_y = np.column_stack((this_X, this_y))
+        X_with_y = np.hstack((this_X, this_y))
+        X.append(X_with_y)
+
         # All signal model parameter variations should get equal weight,
         # but some signal samples have more events.
         # Use 1/n_events as a weight per event.
         signal_weight.append((1./len_sig_cols)*np.ones(len_sig_cols))
-    
+   
+        print(f"this_X shape: {this_X.shape}, this_y shape: {this_y.shape}, X_with_y shape: {X_with_y.shape}")
+ 
     bkg_weight = np.concatenate(bkg_weight)
     signal_weight = np.concatenate(signal_weight)
     # Set total signal weight equal to total bkg weight
