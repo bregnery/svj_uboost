@@ -400,11 +400,21 @@ def columns_to_numpy(
     signal_weight = []
 
     logger.info(f'Downsampling bkg, keeping fraction of {downsample}')
+
     # Get the features for the bkg samples
     for cols in bkg_cols:
+
+        # Apply the mt window
         mtwind = mt_wind(cols, mt_high, mt_low)
         this_X = cols.to_numpy(features)[mtwind]
-        this_weight = cols.arrays[weight_key][mtwind]
+
+        # make sure pile up weights are applied
+        if weight_key == 'weight' :
+            this_weight = cols.arrays['puweight'][mtwind]*cols.arrays['weight'][mtwind]
+        else :
+            this_weight = cols.arrays[weight_key][mtwind]
+
+        # apply the down sampling
         if downsample < 1.:
             #select = np.random.choice(len(cols), int(downsample*len(cols)), replace=False)
             select = np.random.choice(len(this_weight), int(downsample*len(this_weight)), replace=False)
