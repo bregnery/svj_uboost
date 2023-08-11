@@ -10,8 +10,9 @@ from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set
 
 
 training_features = [
-    'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
     'girth', 'ptd', 'axismajor', 'axisminor',
+    #'ptd', 
+    'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
     'ak15_chad_ef', 'ak15_nhad_ef', 'ak15_elect_ef', 'ak15_muon_ef', 'ak15_photon_ef', 
     ]
 all_features = training_features + ['rho']
