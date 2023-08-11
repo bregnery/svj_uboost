@@ -38,11 +38,13 @@ def main():
     #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
     #     }
 
-    models = {'normal full window'    : 'models/svjbdt_Aug01_allsignals_qcdttjets.json',
+    models = {'normal full window'    : '../models/svjbdt_Aug01_allsignals_qcdttjets.json',
               #'rinv 0.3 only'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
-              'mZprime 500 full window' : 'models/svjbdt_Jul31_allsignals_qcdttjets.json',
-              'iterative w/out full window' : 'models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
-              'iterative w/ full window' : 'models/svjbdt_Aug06_allsignals_iterative_qcdttjets.json'}
+              'mZprime 500 full window' : '../models/svjbdt_Jul31_allsignals_qcdttjets.json',
+              'iterative w/out full window' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
+              'iterative w/ full window' : '../models/svjbdt_Aug06_allsignals_iterative_qcdttjets.json',
+              'iterative w/ pile-up weight' : 'models/svjbdt_Aug10_allsignals_iterative_qcdttjets.json'
+             }
     
     # Loop over Z' mass windows of +/- 100 GeV 
     mz_prime = [200, 250, 300, 350, 400, 450, 500, 550]
