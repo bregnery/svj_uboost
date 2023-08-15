@@ -186,8 +186,8 @@ def main():
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
     bkg_cols = [
         Columns.load(f) for f in
-        glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
-        #glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz')
+        #glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
+        glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz')
         #+ glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
         ]
 
