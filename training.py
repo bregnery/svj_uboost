@@ -11,7 +11,6 @@ from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set
 
 training_features = [
     'girth', 'ptd', 'axismajor', 'axisminor',
-    #'ptd', 
     'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
     'ak15_chad_ef', 'ak15_nhad_ef', 'ak15_elect_ef', 'ak15_muon_ef', 'ak15_photon_ef', 
     ]
@@ -310,7 +309,7 @@ def main():
             print_weight_table(bkg_cols, signal_cols, 'weight')
             X, y, weight = columns_to_numpy(
                 signal_cols, bkg_cols, training_features,
-                downsample=args.downsample
+                downsample=args.downsample,
                 )
             outfile = strftime('models/svjbdt_%b%d_allsignals_qcdttjets.json')
 
