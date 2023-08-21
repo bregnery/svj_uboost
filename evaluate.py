@@ -25,7 +25,8 @@ def main():
     qcd_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/QCD_*.npz')]
     qcd_cols = list(filter(lambda c: c.metadata['ptbin'][0]>=300., qcd_cols))
     ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
-    bkg_cols = qcd_cols + ttjets_cols
+    #bkg_cols = qcd_cols + ttjets_cols
+    bkg_cols = ttjets_cols
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
 
     # models = {
@@ -39,8 +40,8 @@ def main():
     #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
     #     }
 
-    models = {'with MT window'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
-              'without MT window' : 'models/svjbdt_Jun27_allsignals_qcdttjets_lr0.30_mcw0.1_maxd8_subs1.0_nest850.json'}
+    #models = {'TTJets_only'    : 'models/svjbdt_Aug18_allsignals_qcdttjets.json'}
+    models = {'TTJets_only'    : 'models/svjbdt_Aug21_allsignals_qcdttjets.json'}
 
     plots(signal_cols, bkg_cols, models)
 
