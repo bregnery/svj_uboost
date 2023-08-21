@@ -413,9 +413,9 @@ def columns_to_numpy(
             this_weight = cols.arrays['puweight'][mtwind]*cols.arrays['weight'][mtwind]
         else :
             this_weight = cols.arrays[weight_key][mtwind]
-        len_bkg_cols = len(cols.arrays[weight_key][mtwind])
-        print(len_bkg_cols)
-        this_weight = (1./len_bkg_cols)*np.ones(len_bkg_cols)
+        #len_bkg_cols = len(cols.arrays[weight_key][mtwind])
+        #print(len_bkg_cols)
+        #this_weight = (1./len_bkg_cols)*np.ones(len_bkg_cols)
 
         # apply the down sampling
         if downsample < 1.:
