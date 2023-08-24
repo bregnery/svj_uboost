@@ -384,6 +384,104 @@ class Columns(svj_ntuple_processing.Columns):
     def weight_per_event(self):
         return self.effxs / len(self)
 
+def columns_to_numpy_for_training(
+    signal_cols, qcd_cols, tt_cols, features,
+    downsample=.4, weight_key='weight',
+    mt_high=650, mt_low=180
+    ):
+    """
+    Takes a list of signal and background Column instances, and outputs
+    a numpy array with `features` as the columns.
+    Ensures that ttjets and qcd are normalized to the same number when making weights
+    """
+    X = []
+    y = []
+    bkg_weight = []
+    tt_weight = []
+    signal_weight = []
+
+    logger.info(f'Downsampling bkg, keeping fraction of {downsample}')
+
+    # user defined normalization value
+    k = 100.0
+
+    # Get the features for the bkg samples
+    for cols in qcd_cols:
+
+        # Apply the mt window
+        mtwind = mt_wind(cols, mt_high, mt_low)
+        this_X = cols.to_numpy(features)[mtwind]
+
+        # make sure pile up weights are applied
+        if weight_key == 'weight' :
+            this_weight = cols.arrays['puweight'][mtwind]*cols.arrays['weight'][mtwind]
+        else :
+            this_weight = cols.arrays[weight_key][mtwind]
+
+        # apply the down sampling
+        if downsample < 1.:
+            select = np.random.choice(len(this_weight), int(downsample*len(this_weight)), replace=False)
+            this_X = this_X[select]
+            this_weight = this_weight[select]
+        X.append(this_X)
+        bkg_weight.append(this_weight)
+        y.append(np.zeros(len(this_X)))
+
+    # concatenate the QCD weights then prepare to add tt weights
+    # while ensuring that the QCD weights are weighted to k where k is user input
+    bkg_weight = np.concatenate(bkg_weight)
+    total_weight = sum(bkg_weight)
+    bkg_weight = [weight * (k / total_weight) for weight in bkg_weight]
+
+    # Get the features for the bkg samples
+    for cols in tt_cols:
+
+        # Apply the mt window
+        mtwind = mt_wind(cols, mt_high, mt_low)
+        this_X = cols.to_numpy(features)[mtwind]
+
+        # make sure pile up weights are applied
+        if weight_key == 'weight' :
+            this_weight = cols.arrays['puweight'][mtwind]*cols.arrays['weight'][mtwind]
+        else :
+            this_weight = cols.arrays[weight_key][mtwind]
+        # apply the down sampling
+        if downsample < 1.:
+            select = np.random.choice(len(this_weight), int(downsample*len(this_weight)), replace=False)
+            this_X = this_X[select]
+            this_weight = this_weight[select]
+        X.append(this_X)
+        tt_weight.append(this_weight)
+        y.append(np.zeros(len(this_X)))
+
+    # concatenate the tt weights then prepare to append them to the QCD weights
+    # while ensuring that the tt weights are weighted to k where k is user input
+    tt_weight = np.concatenate(tt_weight)
+    total_weight = sum(tt_weight)
+    tt_weight = [weight * (k / total_weight) for weight in tt_weight]
+    bkg_weight = np.concatenate((bkg_weight, tt_weight))
+
+    # Get the features for the signal samples
+    for cols in signal_cols:
+        sigmtwind = mt_wind(cols, mt_high, mt_low)
+        X.append(cols.to_numpy(features)[sigmtwind])
+        len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
+        y.append(np.ones(len_sig_cols))
+        # All signal model parameter variations should get equal weight,
+        # but some signal samples have more events.
+        # Use 1/n_events as a weight per event.
+        signal_weight.append((1./len_sig_cols)*np.ones(len_sig_cols))
+    
+    signal_weight = np.concatenate(signal_weight)
+    # Set total signal weight equal to total bkg weight
+    signal_weight *= np.sum(bkg_weight) / np.sum(signal_weight)
+    weight = np.concatenate((bkg_weight, signal_weight))
+
+    X = np.concatenate(X)
+    y = np.concatenate(y)
+    return X, y, weight
+
+
 
 def columns_to_numpy(
     signal_cols, bkg_cols, features,
@@ -416,6 +514,7 @@ def columns_to_numpy(
         #len_bkg_cols = len(cols.arrays[weight_key][mtwind])
         #print(len_bkg_cols)
         #this_weight = (1./len_bkg_cols)*np.ones(len_bkg_cols)
+        #this_weight = (1./len_bkg_cols)*np.ones(len_bkg_cols)*(0.000001)
 
         # apply the down sampling
         if downsample < 1.:
