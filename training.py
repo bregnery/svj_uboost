@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
+from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_training, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
 
 
 training_features = [
@@ -183,14 +183,17 @@ def main():
     logger.info(f'Running training script; args={args}')
 
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
-    bkg_cols = [
-        Columns.load(f) for f in
-        glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
+    tt_cols  = [Columns.load(f) for f in glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz') ]
+    qcd_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz') ]
+    #bkg_cols = [ qcd_cols + tt_cols]
+    #bkg_cols = [
+        #Columns.load(f) for f in
+        #glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
         #glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz')
         #+ glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
-        ]
+        #]
 
-    print(bkg_cols)
+    #print(bkg_cols)
 
     if args.mdark:
         signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mdark'+args.mdark+'*.npz')]
@@ -200,7 +203,9 @@ def main():
     # Throw away the very low QCD bins (very low number of events)
     logger.info('Using QCD bins starting from pt>=300')
     # bkg_cols = list(filter(lambda cols: cols.metadata['bkg_type']!='qcd' or cols.metadata['ptbin'][0]>=300., bkg_cols))
-    bkg_cols = filter_pt(bkg_cols, 300.)
+    #bkg_cols = filter_pt(bkg_cols, 300.)
+    qcd_cols = filter_pt(qcd_cols, 300.)
+    tt_cols = filter_pt(tt_cols, 300.)
     #bkg_cols = mt_wind(bkg_cols, 180, 650)
     #signal_cols = mt_wind(signal_cols, 180, 650)
 
@@ -210,8 +215,9 @@ def main():
         import pandas as pd
         from hep_ml import uboost
 
-        print_weight_table(bkg_cols, signal_cols, 'weight')
-        X, y, weight = columns_to_numpy(signal_cols, bkg_cols, all_features, downsample=.2)
+        print_weight_table(qcd_cols, signal_cols, 'weight')
+        print_weight_table(tt_cols, signal_cols, 'weight')
+        X, y, weight = columns_to_numpy_for_training(signal_cols, qcd_cols, tt_cols, all_features, downsample=.2)
         logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
         X_df = pd.DataFrame(X, columns=all_features)
 
@@ -280,7 +286,7 @@ def main():
         if args.reweight:
             logger.info(f'Reweighting to {args.reweight}')
             # Add a 'reweight' column to all samples:
-            cols = bkg_cols + signal_cols
+            cols = qcd_cols + tt_cols + signal_cols
             if args.ref:
                 reference_col = Columns.load(osp.abspath(args.ref))
                 reference = [col for col in cols if col.metadata == reference_col.metadata][0]
@@ -293,22 +299,25 @@ def main():
             reweight(reference, cols, args.reweight, make_test_plot=args.reweighttestplot)
 
             print('Weight table BEFORE reweighting:')
-            print_weight_table(bkg_cols, signal_cols, 'weight')
+            print_weight_table(qcd_cols, signal_cols, 'weight')
+            print_weight_table(tt_cols, signal_cols, 'weight')
             print('\nWeight table AFTER reweighting:')
-            print_weight_table(bkg_cols, signal_cols, 'reweight')
+            print_weight_table(qcd_cols, signal_cols, 'reweight')
+            print_weight_table(tt_cols, signal_cols, 'reweight')
             if args.reweighttestplot: return
 
             # Get samples using the new 'reweight' key (instead of the default 'weight')
-            X, y, weight = columns_to_numpy(
-                signal_cols, bkg_cols, training_features,
+            X, y, weight = columns_to_numpy_for_training(
+                signal_cols, qcd_cols, tt_cols, training_features,
                 weight_key='reweight', downsample=args.downsample
                 )
             weight *= 100. # For training stability
             outfile = strftime(f'models/svjbdt_%b%d_reweight_{args.reweight}_allsignals_ttjets_refmz250.json')
         else:
-            print_weight_table(bkg_cols, signal_cols, 'weight')
-            X, y, weight = columns_to_numpy(
-                signal_cols, bkg_cols, training_features,
+            print_weight_table(tt_cols, signal_cols, 'weight')
+            print_weight_table(qcd_cols, signal_cols, 'weight')
+            X, y, weight = columns_to_numpy_for_training(
+                signal_cols, qcd_cols, tt_cols, training_features,
                 downsample=args.downsample,
                 )
             outfile = strftime('models/svjbdt_%b%d_allsignals_qcdttjets.json')
