@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
+from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_training, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
 
 
 training_features = [
@@ -183,15 +183,15 @@ def main():
 
     logger.info(f'Running training script; args={args}')
 
-    bkg_cols = [
-        Columns.load(f) for f in
-        glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz')
-        + glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')
-        ]
+    qcd_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz')]
+    tt_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz')]
+    bkg_cols = qcd_cols + tt_cols
 
     # Throw away the very low QCD bins (very low number of events)
     logger.info('Using QCD bins starting from pt>=300')
     # bkg_cols = list(filter(lambda cols: cols.metadata['bkg_type']!='qcd' or cols.metadata['ptbin'][0]>=300., bkg_cols))
+    qcd_cols = filter_pt(qcd_cols, 300.)
+    tt_cols = filter_pt(tt_cols, 300.)
     bkg_cols = filter_pt(bkg_cols, 300.)
     #bkg_cols = mt_wind(bkg_cols, 180, 650)
     #signal_cols = mt_wind(signal_cols, 180, 650)
@@ -203,7 +203,7 @@ def main():
         from hep_ml import uboost
 
         print_weight_table(bkg_cols, signal_cols, 'weight')
-        X, y, weight = columns_to_numpy(signal_cols, bkg_cols, all_features, downsample=.2)
+        X, y, weight = columns_to_numpy_for_training(signal_cols, qcd_cols, tt_cols, all_features, downsample=.2)
         logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
         X_df = pd.DataFrame(X, columns=all_features)
 
@@ -296,8 +296,8 @@ def main():
             if args.reweighttestplot: return
 
             # Get samples using the new 'reweight' key (instead of the default 'weight')
-            X, y, weight = columns_to_numpy(
-                signal_cols, bkg_cols, training_features,
+            X, y, weight = columns_to_numpy_for_training(
+                signal_cols, qcd_cols, tt_cols, training_features,
                 weight_key='reweight', downsample=args.downsample
                 )
             weight *= 100. # For training stability
@@ -348,8 +348,8 @@ def main():
                 print_weight_table(bkg_cols, signal_cols, 'weight')
  
                 # Apply mass window
-                X, y, weight = columns_to_numpy(
-                    signal_cols, bkg_cols, training_features,
+                X, y, weight = columns_to_numpy_for_training(
+                    signal_cols, qcd_cols, tt_cols, training_features,
                     downsample=args.downsample,
                     mt_high = mt_window[1], mt_low = mt_window[0]
                     )
@@ -371,8 +371,8 @@ def main():
         print_weight_table(bkg_cols, signal_cols, 'weight')
 
         # Apply full mass window (180 to 650)
-        X, y, weight = columns_to_numpy(
-            signal_cols, bkg_cols, training_features,
+        X, y, weight = columns_to_numpy_for_training(
+            signal_cols, qcd_cols, tt_cols, training_features,
             downsample=args.downsample,
             )
 
