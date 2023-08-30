@@ -26,6 +26,7 @@ def main():
     qcd_cols = list(filter(lambda c: c.metadata['ptbin'][0]>=300., qcd_cols))
     ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
     bkg_cols = qcd_cols + ttjets_cols
+    #bkg_cols = qcd_cols
     #bkg_cols = ttjets_cols
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
 
@@ -43,7 +44,7 @@ def main():
     #models = {'TTJets_only'    : 'models/svjbdt_Aug18_allsignals_qcdttjets.json'}
     #models = {'TTJets_only'    : 'models/svjbdt_Aug21_allsignals_qcdttjets.json'}
     #models = {'TTJets_only'    : 'models/svjbdt_Aug21_allsignals_ttjets.json'}
-    models = {'TT=QCD=1'    : 'models/svjbdt_Aug24_allsignals_qcdttjets.json'}
+    models = {'TT=QCD=1'    : 'models/svjbdt_Aug28_allsignals_qcdttjets.json'}
 
     plots(signal_cols, bkg_cols, models)
 

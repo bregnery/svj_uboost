@@ -403,7 +403,7 @@ def columns_to_numpy_for_training(
     logger.info(f'Downsampling bkg, keeping fraction of {downsample}')
 
     # user defined normalization value
-    k = 100.0
+    k = 1000000.0
 
     # Get the features for the bkg samples
     for cols in qcd_cols:
@@ -476,6 +476,8 @@ def columns_to_numpy_for_training(
     # Set total signal weight equal to total bkg weight
     signal_weight *= np.sum(bkg_weight) / np.sum(signal_weight)
     weight = np.concatenate((bkg_weight, signal_weight))
+
+    print(weight)
 
     X = np.concatenate(X)
     y = np.concatenate(y)
@@ -552,6 +554,26 @@ def columns_to_numpy(
     y = np.concatenate(y)
     return X, y, weight
 
+def columns_to_numpy_single(
+    cols, features,
+    mt_high=650, mt_low=180
+    ):
+    """
+    Takes a list of signal and background Column instances, and outputs
+    a numpy array with `features` as the columns.
+    """
+    X = []
+
+    # Get the features for the bkg samples
+    for col in cols:
+
+        # Apply the mt window
+        mtwind = mt_wind(col, mt_high, mt_low)
+        this_X = col.to_numpy(features)[mtwind]
+        X.append(this_X)
+
+    X = np.concatenate(X)
+    return X
 
 def add_key_value_to_json(json_file, key, value):
     with open(json_file, 'r') as f:
