@@ -10,8 +10,8 @@ from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_
 
 
 training_features = [
-    #'girth', 'ptd', 'axismajor', 'axisminor',
-    'ptd', 'axismajor', 'axisminor',
+    'girth', 'ptd', 'axismajor', 'axisminor',
+    #'ptd', 'axismajor', 'axisminor',
     'ecfm2b1', 'ecfd2b1', 'ecfc2b1', 'ecfn2b2', 'metdphi',
     'ak15_chad_ef', 'ak15_nhad_ef', 'ak15_elect_ef', 'ak15_muon_ef', 'ak15_photon_ef', 
     ]
@@ -377,8 +377,8 @@ def main():
             )
 
         # fit over the full window (180 to 650)
-        with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
-            model.fit(X, y, sample_weight=weight, xgb_model=model)
+        #with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
+        #    model.fit(X, y, sample_weight=weight, xgb_model=model)
         
 
         if not osp.isdir('models'): os.makedirs('models')

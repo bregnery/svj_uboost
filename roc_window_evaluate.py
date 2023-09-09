@@ -27,23 +27,13 @@ def main():
     ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
     bkg_cols = qcd_cols + ttjets_cols
 
-    # models = {
-    #     'ref_mz250_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p1.json',
-    #     'ref_mz250_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz250_rinv0p3.json',
-    #     'ref_mz350_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz350_rinv0p1.json',
-    #     'ref_mz350_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz350_rinv0p3.json',
-    #     'ref_mz450_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz450_rinv0p1.json',
-    #     'ref_mz450_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz450_rinv0p3.json',
-    #     'ref_mz550_rinv0p1' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p1.json',
-    #     'ref_mz550_rinv0p3' : 'models/svjbdt_Nov22_reweight_mt_ref_mz550_rinv0p3.json',
-    #     }
-
     models = {'normal full window'    : '../models/svjbdt_Aug01_allsignals_qcdttjets.json',
               #'rinv 0.3 only'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
-              'mZprime 500 full window' : '../models/svjbdt_Jul31_allsignals_qcdttjets.json',
-              'iterative w/out full window' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
-              'iterative w/ full window' : '../models/svjbdt_Aug06_allsignals_iterative_qcdttjets.json',
-              'iterative w/ pile-up weight' : 'models/svjbdt_Aug10_allsignals_iterative_qcdttjets.json'
+              #'iterative w/out full window' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
+              #'iterative w/ full window' : '../models/svjbdt_Aug06_allsignals_iterative_qcdttjets.json',
+              'iterative w/ normal weights' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
+              'iterative w/ scaled weights' : 'models/svjbdt_Sep06_allsignals_iterative_qcdttjets.json',
+              'normal with weights scaled' : 'models/svjbdt_Aug28_allsignals_qcdttjets.json'
              }
     
     # Loop over Z' mass windows of +/- 100 GeV 
@@ -96,9 +86,8 @@ def plots(signal_cols, bkg_cols, models, mz, mt_window):
                     with time_and_log(f'Calculating scores for {key}...'):
                         scores[key] = uboost_model.predict_proba(X_df)[:,1]
 
-    # Sort scores by decreasing auc score
+    # Print score values
     aucs = {key: roc_auc_score(y, score, sample_weight=weight) for key, score in scores.items()}
-    scores = OrderedDict(sorted(scores.items(), key=lambda p: -aucs[p[0]]))
     for key in scores: print(f'{key:50} {aucs[key]}')
     print(aucs)
 
