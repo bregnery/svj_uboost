@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_training, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
+from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_training, columns_to_numpy_one_bkg, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
 
 # Training features
 training_features = [
@@ -17,86 +17,16 @@ training_features = [
 all_features = training_features + ['rho']
 
 # Parameters for 'weak' BDT models 
-# i.e. models on individual Z' mass points 
-weak_params = { "lr" : 0.05, "minchildweight" : 0.1, "maxdepth" : 6, "subsample" : 1.0, "nest" : 400}
+# i.e. models on individual Z' mass points
+# note: eta is learning rate
+weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
 
 # Parameters  for 'strong' BDT models
 # i.e. models on the full mT window
-strong_params = { "lr" : 0.30, "minchildweight" : 0.1, "maxdepth" : 8, "subsample" : 1.0, "nest" : 850}
+strong_params = dict( eta=0.30, min_child_weight=0.1, max_depth=8, subsample=1.0, n_estimators=850)
 
 # Parameters for the ensembled BDT
-ensem_params = { "lr" : 0.05, "minchildweight" : 0.1, "maxdepth" : 6, "subsample" : 1.0, "nest" : 400}
-
-
-def reweight(reference, samples, reweight_var, make_test_plot=False):
-    # For the reference model, the new 'reweight' is equal to the old 'weight'
-    reference.arrays['reweight'] = np.copy(reference.arrays['weight']) * np.copy(reference.arrays['puweight'])
-
-    # Binning is hand-tuned for now
-    reweight_bins = dict(
-        girth = np.linspace(0., 1.5, 40),
-        pt = np.linspace(0., 1000, 40),
-        mt = np.linspace(0., 1000, 40),
-        rho = np.linspace(-10., 0.5, 40)
-        )[reweight_var]
-
-    logger.info(
-        f'Reweighting for variable {reweight_var};'
-        f' histogram {reweight_bins[0]} to {reweight_bins[-1]} with {reweight_bins.shape[0]-1} bins;'
-        f' last bin will be treated as overflow bin.'
-        )
-    reweight_bins[-1] = np.inf
-
-    logger.info(f'Reference sample: {reference.metadata}')
-
-    # Get the reference histogram, distribution of the reweight_var in the reference sample
-    reference_hist, _ = np.histogram(reference.arrays[reweight_var], bins=reweight_bins)
-
-    for sample in samples:
-        if sample is reference or sample.metadata == reference.metadata: continue
-        hist, _ = np.histogram(sample.arrays[reweight_var], bins=reweight_bins)
-        reweight_hist = np.where(hist>0, reference_hist/hist, 0.)
-        vals = sample.arrays[reweight_var]
-        sample.arrays['reweight'] = np.copy(sample.arrays['weight']) * np.copy(sample.arrays['puweight'])
-        for i, (left, right) in enumerate(zip(reweight_bins[:-1], reweight_bins[1:])):
-            sample.arrays['reweight'][(left < vals) &  (vals <= right)] *= reweight_hist[i]
-
-    if make_test_plot:
-        logger.info(f'Making test plot for reweighting with variable {reweight_var}')
-
-        # sample = [s for s in samples if s.metadata.get('bkg_type',None) == 'qcd' and s.metadata['ptbin'][0]==470][0]
-        sample = [s for s in samples if osp.basename(s.metadata['src'])=='TTJets_TuneCP5_13TeV-madgraphMLM-pythia8.npz'][0]
-
-        set_matplotlib_fontsizes()
-        fig = plt.figure(figsize=(13,13))
-        ax = fig.gca()
-
-        ax.hist(
-            reference.arrays[reweight_var], bins=reweight_bins,
-            density=True, histtype='step',
-            label=f'reference: {osp.basename(reference.metadata["src"])}'
-            )
-        ax.hist(
-            sample.arrays[reweight_var], bins=reweight_bins,
-            density=True, histtype='step',
-            label=f'unreweighted: {osp.basename(sample.metadata["src"])}'
-            )
-        ax.hist(
-            sample.arrays[reweight_var],
-            bins=reweight_bins, density=True, histtype='step',
-            weights=sample.arrays['reweight'],
-            label=f'reweighted: {osp.basename(sample.metadata["src"])}',
-            linestyle='dashed', color='red', linewidth=2
-            )
-
-        ax.set_title(f'Reweight: {reweight_var}', fontsize=30)
-        ax.legend()
-        ax.set_xlabel(reweight_var)
-        ax.set_ylabel('a.u.')
-        outfile = f'plots/reweighting_test_plot_{reweight_var}.png'
-        plt.savefig(outfile, bbox_inches='tight')
-        imgcat(outfile)
-
+ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
 
 
 def print_weight_table(bkg_cols, signal_cols, weight_col='weight'):
@@ -148,9 +78,6 @@ def print_weight_table(bkg_cols, signal_cols, weight_col='weight'):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('model', type=str, choices=['uboost', 'xgboost'])
-    parser.add_argument('--reweight', type=str)
-    parser.add_argument('--reweighttestplot', action='store_true')
     parser.add_argument('--downsample', type=float, default=.4)
     parser.add_argument('--dry', action='store_true')
     parser.add_argument('--node', type=str, help='Run training on a different lpc node.')
@@ -158,7 +85,6 @@ def main():
     # Some test flags for alternative trainings
     parser.add_argument('--gradientboost', action='store_true')
     parser.add_argument('--use_eta', action='store_true')
-    parser.add_argument('--ref', type=str, help='path to the npz file for the reference distribution for reweighting.')
     # adding signal models
     parser.add_argument('--mdark', type=str)#, default='10.')
     parser.add_argument('--rinv', type=str)#, default='0.3')
@@ -201,198 +127,171 @@ def main():
     qcd_cols = filter_pt(qcd_cols, 300.)
     tt_cols = filter_pt(tt_cols, 300.)
     bkg_cols = filter_pt(bkg_cols, 300.)
-    #bkg_cols = mt_wind(bkg_cols, 180, 650)
-    #signal_cols = mt_wind(signal_cols, 180, 650)
 
     logger.info(f'Training features: {training_features}')
 
-    if args.model == 'uboost':
-        import pandas as pd
-        from hep_ml import uboost
+    # Parse the leftover arguments to see if there are any hyper parameters
+    hyperpar_parser = argparse.ArgumentParser()
+    hyperpar_args = hyperpar_parser.parse_args(leftover_args)
 
-        print_weight_table(bkg_cols, signal_cols, 'weight')
-        X, y, weight = columns_to_numpy_for_training(signal_cols, qcd_cols, tt_cols, all_features, downsample=.2)
-        logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
-        X_df = pd.DataFrame(X, columns=all_features)
+    import xgboost as xgb
+    qcd_models = {} # signal vs. qcd models
+    tt_models  = {} # signal vs. tt models
 
-        if args.gradientboost:
-            from hep_ml.gradientboosting import UGradientBoostingClassifier
-            from hep_ml.losses import BinFlatnessLossFunction, KnnFlatnessLossFunction
-            
-            base_tree = uboost.DecisionTreeClassifier(max_depth=4)
-            model = UGradientBoostingClassifier(
-                #loss=BinFlatnessLossFunction(uniform_features=['mt'], uniform_label=0, n_bins=50),
-                loss=BinFlatnessLossFunction(uniform_features=['rho'], uniform_label=0, n_bins=50),
-                n_estimators=100,
-                train_features=training_features,
-                max_depth=4
-                )
-            outfile = strftime('models/uboost_%b%d_gradbin.pkl')
-        else:
-            base_tree = uboost.DecisionTreeClassifier(max_depth=4)
-            model = uboost.uBoostClassifier( # "uBoostBDT" in the uBoost documentation
-                #uniform_features=['mt'], uniform_label=0,
-                uniform_features=['rho'], uniform_label=0,
-                base_estimator=base_tree,
-                train_features=training_features,
-                n_estimators=100,
-                n_threads=4,
-                n_neighbors=30
-                )
-            outfile = strftime('models/uboost_%b%d_knn.pkl')
+    # Perform an iterative training, reweighting not yet available
+    # fit once per signal mass window on limited signal masses,
+    # then perform a training on the full window
+    outfile = strftime('models/svjbdt_%b%d_semi-visible_forest.json')
+    mz_prime = [200, 250, 300, 350, 400, 450, 500, 550]
+
+    if args.use_eta: outfile = outfile.replace('.json', '_eta.json')
+    if args.tag: outfile = outfile.replace('.json', f'_{args.tag}.json')
+
+    if args.dry:
+        logger.info('Dry mode: Quitting')
+        return
+
+    # loop over the signal Z' masses
+    nLoops = 0 # monitor the number of loops for the training
+    for mz in mz_prime :
+
+        # create a weak model for every Z' mass point for qcd and tt
+        qcd_model = xgb.XGBClassifier(use_label_encoder=False, **weak_params)
+        tt_model = xgb.XGBClassifier(use_label_encoder=False, **weak_params)
+
+        # define mass window
+        mt_window = [mz - 100, mz + 100] 
         
-        if args.dry:
-            logger.info('Dry mode: Quitting')
-            return
-        with time_and_log('Begin training uBoost. This can take >24h hours...'):
-            model.fit(X_df, y, weight)
-        if not osp.isdir('models'): os.makedirs('models')
-        
-        if args.tag: outfile = outfile.replace('.pkl', f'_{args.tag}.pkl')
-
-        logger.info('Dumping trained model to %s', outfile)
-        with open(outfile, 'wb') as f:
-            pickle.dump(model, f)
-
-    elif args.model == 'xgboost':
-        # Parse the leftover arguments to see if there are any hyper parameters
-
-        hyperpar_parser = argparse.ArgumentParser()
-        hyperpar_parser.add_argument('--lr', dest='eta', type=float)
-        hyperpar_parser.add_argument('--minchildweight', dest='min_child_weight', type=float)
-        hyperpar_parser.add_argument('--maxdepth', dest='max_depth', type=int)
-        hyperpar_parser.add_argument('--subsample', type=float)
-        hyperpar_parser.add_argument('--nest', dest='n_estimators', type=int)
-        hyperpar_args = hyperpar_parser.parse_args(leftover_args)
-
-        parameters = dict( # Base parameters
-            eta=.05,
-            max_depth=4,
-            n_estimators=850,
-            )
-        # Update with possible command line options
-        parameters.update({k:v for k, v in hyperpar_args.__dict__.items() if v is not None})
-        logger.warning(f'Using the following hyperparameters:\n{pprint.pformat(parameters)}')
-
-        import xgboost as xgb
-        model = xgb.XGBClassifier(use_label_encoder=False, **parameters)
-
-        if args.reweight:
-            signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz550*.npz')]
-            if args.mdark:
-                signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mdark'+args.mdark+'*.npz')]
-            if args.rinv:
-                signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*rinv'+args.rinv+'*.npz')]
-            logger.info(f'Reweighting to {args.reweight}')
-            # Add a 'reweight' column to all samples:
-            cols = bkg_cols + signal_cols
-            if args.ref:
-                reference_col = Columns.load(osp.abspath(args.ref))
-                reference = [col for col in cols if col.metadata == reference_col.metadata][0]
-            else:
-                # Use a default reference of mz=350, rinv=.3
-                reference = [s for s in signal_cols if s.metadata['mz']==350 and s.metadata['rinv']==.3][0]
-            logger.info(f'Using as a reference: {reference.metadata}')
-
-            cols.remove(reference)
-            reweight(reference, cols, args.reweight, make_test_plot=args.reweighttestplot)
-
-            print('Weight table BEFORE reweighting:')
-            print_weight_table(bkg_cols, signal_cols, 'weight')
-            print('\nWeight table AFTER reweighting:')
-            print_weight_table(bkg_cols, signal_cols, 'reweight')
-            if args.reweighttestplot: return
-
-            # Get samples using the new 'reweight' key (instead of the default 'weight')
-            X, y, weight = columns_to_numpy_for_training(
-                signal_cols, qcd_cols, tt_cols, training_features,
-                weight_key='reweight', downsample=args.downsample
-                )
-            weight *= 100. # For training stability
-            outfile = strftime(f'models/svjbdt_%b%d_reweight_{args.reweight}_allsignals_ttjets_refmz250.json')
-
-            logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
+        # grab corresponding signal files
+        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz' + str(mz) + '*.npz')]
  
-            if args.use_eta: outfile = outfile.replace('.json', '_eta.json')
-            if args.tag: outfile = outfile.replace('.json', f'_{args.tag}.json')
- 
-            if args.dry:
-                logger.info('Dry mode: Quitting')
-                return
-            #with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
-            #    model.fit(X, y, sample_weight=weight)
- 
-            with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
-                model.fit(X, y, sample_weight=weight)
-        else:
-
-            # Perform an iterative training, reweighting not yet available
-            # fit once per signal mass window on limited signal masses,
-            # then perform a training on the full window
-            outfile = strftime('models/svjbdt_%b%d_allsignals_iterative_qcdttjets.json')
-            mz_prime = [200, 250, 300, 350, 400, 450, 500, 550]
-
-            if args.use_eta: outfile = outfile.replace('.json', '_eta.json')
-            if args.tag: outfile = outfile.replace('.json', f'_{args.tag}.json')
-
-            if args.dry:
-                logger.info('Dry mode: Quitting')
-                return
-
-            # loop over the signal Z' masses
-            nLoops = 0 # monitor the number of loops for the training
-            for mz in mz_prime :
-                # define mass window
-                mt_window = [mz - 100, mz + 100] 
-                
-                # grab corresponding signal files
-                signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz' + str(mz) + '*.npz')]
- 
-                # dark options need to be updated
-                if args.mdark:
-                    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mdark'+args.mdark+'*.npz')]
-                if args.rinv:
-                    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*rinv'+args.rinv+'*.npz')]
-                print_weight_table(bkg_cols, signal_cols, 'weight')
- 
-                # Apply mass window
-                X, y, weight = columns_to_numpy_for_training(
-                    signal_cols, qcd_cols, tt_cols, training_features,
-                    downsample=args.downsample,
-                    mt_high = mt_window[1], mt_low = mt_window[0]
-                    )
- 
-                logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
- 
-                # fit once per signal mass window on limited signal masses,
-                with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
-                    if nLoops == 0 :
-                        model.fit(X, y, sample_weight=weight)
-                    else :
-                        model.fit(X, y, sample_weight=weight, xgb_model=model)
-
-                # count loop number
-                nLoops += 1
-
-        # grab all signal files
-        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
+        # dark options need to be updated
+        if args.mdark:
+            signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mdark'+args.mdark+'*.npz')]
+        if args.rinv:
+            signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*rinv'+args.rinv+'*.npz')]
         print_weight_table(bkg_cols, signal_cols, 'weight')
 
-        # Apply full mass window (180 to 650)
-        X, y, weight = columns_to_numpy_for_training(
-            signal_cols, qcd_cols, tt_cols, training_features,
+        # Start with signal vs QCD 
+        # Apply mass window
+        X, y, weight = columns_to_numpy_one_bkg(
+            signal_cols, qcd_cols, training_features,
             downsample=args.downsample,
+            mt_high = mt_window[1], mt_low = mt_window[0]
             )
+ 
+        logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
+ 
+        # fit once per signal mass window on limited signal masses,
+        with time_and_log(f'Begin training, qcd for dst={mz}. This can take a while...'):
+            if nLoops == 0 :
+                qcd_model.fit(X, y, sample_weight=weight)
+            else :
+                qcd_model.fit(X, y, sample_weight=weight, xgb_model=model)
 
-        # fit over the full window (180 to 650)
-        with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
-            model.fit(X, y, sample_weight=weight, xgb_model=model)
-        
+        # Add model to the dictionary
+        qcd_models.update({"sig_qcd_mZ"+str(mZ) : qcd_model})
 
-        if not osp.isdir('models'): os.makedirs('models')
+        # Now train with signal vs tt
+        # Apply mass window
+        X, y, weight = columns_to_numpy_one_bkg(
+            signal_cols, tt_cols, training_features,
+            downsample=args.downsample,
+            mt_high = mt_window[1], mt_low = mt_window[0]
+            )
+ 
+        logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
+ 
+        # fit once per signal mass window on limited signal masses,
+        with time_and_log(f'Begin training, tt for dst={mz}. This can take a while...'):
+            if nLoops == 0 :
+                tt_model.fit(X, y, sample_weight=weight)
+            else :
+                tt_model.fit(X, y, sample_weight=weight, xgb_model=model)
+
+        # Add model to the dictionary
+        tt_models.update({"sig_tt_mZ"+str(mZ) : tt_model})
+
+        # count loop number
+        nLoops += 1
+
+    # grab all signal files
+    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
+
+    # Start with the QCD model on the full window
+    # make the model with 'strong' parameters
+    full_qcd_model = xgb.XGBClassifier(use_label_encoder=False, **strong_params)
+
+    # Apply full mass window (180 to 650)
+    X, y, weight = columns_to_numpy_one_bkg(
+        signal_cols, qcd_cols, training_features,
+        downsample=args.downsample,
+        )
+
+    # fit over the full window (180 to 650)
+    with time_and_log(f'Begin training, signal vs qcd model on 180 to 650 window. This can take a while...'):
+        full_qcd_model.fit(X, y, sample_weight=weight, xgb_model=model)
+   
+    # Add model to the dictionary 
+    qcd_models.update({"sig_qcd_180_to_650" : full_qcd_model})
+
+    # Now train signal vs. tt model on the full window
+    # make the model with 'strong' parameters
+    full_tt_model = xgb.XGBClassifier(use_label_encoder=False, **strong_params)
+
+    # Apply full mass window (180 to 650)
+    X, y, weight = columns_to_numpy_one_bkg(
+        signal_cols, tt_cols, training_features,
+        downsample=args.downsample,
+        )
+
+    # fit over the full window (180 to 650)
+    with time_and_log(f'Begin training, signal vs tt model on 180 to 650 window. This can take a while...'):
+        full_tt_model.fit(X, y, sample_weight=weight, xgb_model=model)
+   
+    # Add model to the dictionary 
+    full_models.update({"sig_tt_180_to_650" : full_tt_model})
+
+    # Now ensemble everything together
+
+    # Apply full mass window (180 to 650)
+    X, y, weight = columns_to_numpy_for_training(
+        signal_cols, qcd_cols, tt_cols, training_features,
+        downsample=args.downsample,
+        )
+
+    # Evaluate all models
+    predictions = []
+    prediction_names = {}
+    models = {**qcd_models, **tt_models} # Models will always need to be evaluated in this order
+    for name, model in models.items():
+        predictions.append(model.predict_proba(X)[:, 1] )
+        prediction_names.append(name)
+
+    # Combine all preditions into training features
+    ensemble_features = np.column_stack(predictions)
+
+    # The ensemble model settings
+    ensemble_model = xgb.XGBClassifier(use_label_encoder=False, **ensemble_params)
+
+    # Train ensembled model
+    # over the full window (180 to 650)
+    with time_and_log(f'Begin training ensembled model. This can take a while...'):
+        ensemble_model.fit(ensemble_features, y, sample_weight=weight, xgb_model=model)
+
+    # save json output files of each model
+    if not osp.isdir('models'): os.makedirs('models')
+    if not osp.isdir('models/enseble'): os.makedirs('models/ensemble')
+    for name, model in models.items():
+        outfile = strftime('models/ensemble/bdt_%b%d'+name+'.json')
         model.save_model(outfile)
-        logger.info(f'Dumped trained model to {outfile}')
+        logger.info(f'Dumped trained model: '+name)
         add_key_value_to_json(outfile, 'features', training_features)
+
+    outfile = strftime('models/ensemble/ensebled_%b%d_semi-visible_forest.json')
+    model.save_model(outfile)
+    logger.info(f'Dumped trained models')
+    add_key_value_to_json(outfile, 'features', prediction_names)
 
 
 if __name__ == '__main__':
