@@ -19,14 +19,17 @@ all_features = training_features + ['rho']
 # Parameters for 'weak' BDT models 
 # i.e. models on individual Z' mass points
 # note: eta is learning rate
-weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+#weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 # Parameters  for 'strong' BDT models
 # i.e. models on the full mT window
-strong_params = dict( eta=0.30, min_child_weight=0.1, max_depth=8, subsample=1.0, n_estimators=850)
+#strong_params = dict( eta=0.30, min_child_weight=0.1, max_depth=8, subsample=1.0, n_estimators=850)
+strong_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 # Parameters for the ensembled BDT
-ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+#ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 
 def print_weight_table(bkg_cols, signal_cols, weight_col='weight'):
@@ -70,9 +73,9 @@ def print_weight_table(bkg_cols, signal_cols, weight_col='weight'):
 
     # Print the table
     width = max(len(r[0]) for r in table)
-    print(f'{"Sample":{width}}  {"n_events":>10}  {"weight/evt":>14}  total_weight')
+    print(f'{"Sample":{width}}')
     for r in table:
-        print(f'{r[0]:{width}}  {r[1]:10d}  {r[2]:14.9f}  {r[3]:6.3f} ({100.*r[3]/total_weight:.7f}%)')
+        print(f'{r[0]:{width}}')
 
 
 
@@ -152,7 +155,6 @@ def main():
         return
 
     # loop over the signal Z' masses
-    nLoops = 0 # monitor the number of loops for the training
     for mz in mz_prime :
 
         # create a weak model for every Z' mass point for qcd and tt
@@ -183,14 +185,11 @@ def main():
         logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
  
         # fit once per signal mass window on limited signal masses,
-        with time_and_log(f'Begin training, qcd for dst={mz}. This can take a while...'):
-            if nLoops == 0 :
-                qcd_model.fit(X, y, sample_weight=weight)
-            else :
-                qcd_model.fit(X, y, sample_weight=weight, xgb_model=model)
+        with time_and_log(f'Begin training, signal vs qcd for mZ={mz}. This can take a while...'):
+            qcd_model.fit(X, y, sample_weight=weight)
 
         # Add model to the dictionary
-        qcd_models.update({"sig_qcd_mZ"+str(mZ) : qcd_model})
+        qcd_models.update({"sig_qcd_mZ"+str(mz) : qcd_model})
 
         # Now train with signal vs tt
         # Apply mass window
@@ -203,17 +202,12 @@ def main():
         logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
  
         # fit once per signal mass window on limited signal masses,
-        with time_and_log(f'Begin training, tt for dst={mz}. This can take a while...'):
-            if nLoops == 0 :
-                tt_model.fit(X, y, sample_weight=weight)
-            else :
-                tt_model.fit(X, y, sample_weight=weight, xgb_model=model)
+        with time_and_log(f'Begin training, signal vs tt for mZ={mz}. This can take a while...'):
+            tt_model.fit(X, y, sample_weight=weight)
 
         # Add model to the dictionary
-        tt_models.update({"sig_tt_mZ"+str(mZ) : tt_model})
+        tt_models.update({"sig_tt_mZ"+str(mz) : tt_model})
 
-        # count loop number
-        nLoops += 1
 
     # grab all signal files
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
@@ -230,7 +224,7 @@ def main():
 
     # fit over the full window (180 to 650)
     with time_and_log(f'Begin training, signal vs qcd model on 180 to 650 window. This can take a while...'):
-        full_qcd_model.fit(X, y, sample_weight=weight, xgb_model=model)
+        full_qcd_model.fit(X, y, sample_weight=weight)
    
     # Add model to the dictionary 
     qcd_models.update({"sig_qcd_180_to_650" : full_qcd_model})
@@ -247,10 +241,10 @@ def main():
 
     # fit over the full window (180 to 650)
     with time_and_log(f'Begin training, signal vs tt model on 180 to 650 window. This can take a while...'):
-        full_tt_model.fit(X, y, sample_weight=weight, xgb_model=model)
+        full_tt_model.fit(X, y, sample_weight=weight)
    
     # Add model to the dictionary 
-    full_models.update({"sig_tt_180_to_650" : full_tt_model})
+    tt_models.update({"sig_tt_180_to_650" : full_tt_model})
 
     # Now ensemble everything together
 
@@ -262,7 +256,7 @@ def main():
 
     # Evaluate all models
     predictions = []
-    prediction_names = {}
+    prediction_names = []
     models = {**qcd_models, **tt_models} # Models will always need to be evaluated in this order
     for name, model in models.items():
         predictions.append(model.predict_proba(X)[:, 1] )
@@ -272,12 +266,12 @@ def main():
     ensemble_features = np.column_stack(predictions)
 
     # The ensemble model settings
-    ensemble_model = xgb.XGBClassifier(use_label_encoder=False, **ensemble_params)
+    ensemble_model = xgb.XGBClassifier(use_label_encoder=False, **ensem_params)
 
     # Train ensembled model
     # over the full window (180 to 650)
     with time_and_log(f'Begin training ensembled model. This can take a while...'):
-        ensemble_model.fit(ensemble_features, y, sample_weight=weight, xgb_model=model)
+        ensemble_model.fit(ensemble_features, y, sample_weight=weight)
 
     # save json output files of each model
     if not osp.isdir('models'): os.makedirs('models')
