@@ -19,17 +19,17 @@ all_features = training_features + ['rho']
 # Parameters for 'weak' BDT models 
 # i.e. models on individual Z' mass points
 # note: eta is learning rate
-#weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
-weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
+weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+#weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 # Parameters  for 'strong' BDT models
 # i.e. models on the full mT window
-#strong_params = dict( eta=0.30, min_child_weight=0.1, max_depth=8, subsample=1.0, n_estimators=850)
-strong_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
+strong_params = dict( eta=0.30, min_child_weight=0.1, max_depth=8, subsample=1.0, n_estimators=850)
+#strong_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 # Parameters for the ensembled BDT
-#ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
-ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
+ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+#ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 
 def print_weight_table(bkg_cols, signal_cols, weight_col='weight'):
@@ -275,7 +275,7 @@ def main():
 
     # save json output files of each model
     if not osp.isdir('models'): os.makedirs('models')
-    if not osp.isdir('models/enseble'): os.makedirs('models/ensemble')
+    if not osp.isdir('models/ensemble'): os.makedirs('models/ensemble')
     for name, model in models.items():
         outfile = strftime('models/ensemble/bdt_%b%d'+name+'.json')
         model.save_model(outfile)
