@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_training, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
+from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_iter_training, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
 
 
 training_features = [
@@ -203,7 +203,7 @@ def main():
         from hep_ml import uboost
 
         print_weight_table(bkg_cols, signal_cols, 'weight')
-        X, y, weight = columns_to_numpy_for_training(signal_cols, qcd_cols, tt_cols, all_features, downsample=.2)
+        X, y, weight = columns_to_numpy_for_iter_training(signal_cols, qcd_cols, tt_cols, all_features)
         logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
         X_df = pd.DataFrame(X, columns=all_features)
 
@@ -296,9 +296,9 @@ def main():
             if args.reweighttestplot: return
 
             # Get samples using the new 'reweight' key (instead of the default 'weight')
-            X, y, weight = columns_to_numpy_for_training(
+            X, y, weight = columns_to_numpy_for_iter_training(
                 signal_cols, qcd_cols, tt_cols, training_features,
-                weight_key='reweight', downsample=args.downsample
+                weight_key='reweight'
                 )
             weight *= 100. # For training stability
             outfile = strftime(f'models/svjbdt_%b%d_reweight_{args.reweight}_allsignals_ttjets_refmz250.json')
@@ -348,9 +348,8 @@ def main():
                 print_weight_table(bkg_cols, signal_cols, 'weight')
  
                 # Apply mass window
-                X, y, weight = columns_to_numpy_for_training(
+                X, y, weight = columns_to_numpy_for_iter_training(
                     signal_cols, qcd_cols, tt_cols, training_features,
-                    downsample=args.downsample,
                     mt_high = mt_window[1], mt_low = mt_window[0]
                     )
  
@@ -367,14 +366,13 @@ def main():
                 nLoops += 1
 
         # grab all signal files
-        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
-        print_weight_table(bkg_cols, signal_cols, 'weight')
+        #signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
+        #print_weight_table(bkg_cols, signal_cols, 'weight')
 
         # Apply full mass window (180 to 650)
-        X, y, weight = columns_to_numpy_for_training(
-            signal_cols, qcd_cols, tt_cols, training_features,
-            downsample=args.downsample,
-            )
+        #X, y, weight = columns_to_numpy_for_iter_training(
+        #    signal_cols, qcd_cols, tt_cols, training_features,
+        #    )
 
         # fit over the full window (180 to 650)
         #with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):

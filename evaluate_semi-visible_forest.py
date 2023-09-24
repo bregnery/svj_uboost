@@ -19,7 +19,9 @@ training_features = [
 all_features = training_features + ['mt']
 
 # Get the name of all the individual trees
-date="Sep09"
+date="Sep12"
+directory="models/ensemble/"
+#directory="models/weak_ensemble/"
 decision_trees = []
 tree_names  =    ["sig_qcd_mZ200", "sig_qcd_mZ250", "sig_qcd_mZ300", "sig_qcd_mZ350", 
                   "sig_qcd_mZ400", "sig_qcd_mZ450", "sig_qcd_mZ500", "sig_qcd_mZ550", 
@@ -27,8 +29,9 @@ tree_names  =    ["sig_qcd_mZ200", "sig_qcd_mZ250", "sig_qcd_mZ300", "sig_qcd_mZ
                   "sig_tt_mZ200", "sig_tt_mZ250", "sig_tt_mZ300", "sig_tt_mZ350", 
                   "sig_tt_mZ400", "sig_tt_mZ450", "sig_tt_mZ500", "sig_tt_mZ550", 
                   "sig_tt_180_to_650"]
+                  #"normal_weights_model"]
 for tree in tree_names :
-    decision_trees.append('models/ensemble/bdt_'+date+tree+'.json')
+    decision_trees.append(directory+'bdt_'+date+tree+'.json')
 
 print(decision_trees)
 
@@ -42,14 +45,35 @@ def main():
     #bkg_cols = ttjets_cols
     signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*.npz')]
 
-    models = {'Semi-visible Forest'    : 'models/ensemble/ensebled_Sep09_semi-visible_forest.json'}
-    #          'TT=QCD=1'    : 'models/svjbdt_Sep09_allsignals_qcdttjets.json'}
+    models = {'Semi-visible Forest'    : directory+'ensebled_'+date+'_semi-visible_forest.json',
+              'TT=QCD=1e6 full window'    : 'models/svjbdt_Sep09_allsignals_qcdttjets.json',
+              #'TT=QCD=1e6 iterative'    : 'models/svjbdt_Sep13_allsignals_iterative_qcdttjets.json',
+              'TT=QCD=1e6 iterative'    : 'models/svjbdt_Sep24_allsignals_iterative_qcdttjets.json',
+              'normal full window' : '../models/svjbdt_Aug01_allsignals_qcdttjets.json',
+              'iterative w/ normal weights' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
+             }
 
-    plots(signal_cols, bkg_cols, models)
+    # Make ROC curves on the full mT window
+    mt_window = [180, 650]
+    plots(signal_cols, bkg_cols, models, None, mt_window)
+
+    # Loop over Z' mass windows of +/- 100 GeV 
+    mz_prime = [200, 250, 300, 350, 400, 450, 500, 550]
+    for mz in mz_prime :
+
+        # define mass window
+        mt_window = [mz - 100, mz + 100]
+        #mt_window = [180, 650]
+
+        # grab correct signal files
+        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*mz' + str(mz) + '*.npz')]
+
+        # make plots using the mt window
+        plots(signal_cols, bkg_cols, models, mz, mt_window)
 
 
-def plots(signal_cols, bkg_cols, models):
-    X, y, weight = columns_to_numpy(signal_cols, bkg_cols, features=all_features, downsample=1.)
+def plots(signal_cols, bkg_cols, models, mz, mt_window):
+    X, y, weight = columns_to_numpy(signal_cols, bkg_cols, features=all_features, downsample=1., mt_high = mt_window[1], mt_low = mt_window[0])
 
     import pandas as pd
     X_df = pd.DataFrame(X, columns=all_features)
@@ -80,8 +104,8 @@ def plots(signal_cols, bkg_cols, models):
                     tree_model.load_model(tree)
 
                     # Make predicitons with every tree
-                    with time_and_log(f'Calculating xgboost scores for {tree}...'):
-                        tree_predictions.append(tree_model.predict_proba(X_eta if 'eta' in key else X)[:,1])
+                    #with time_and_log(f'Calculating xgboost scores for {tree}...'):
+                    tree_predictions.append(tree_model.predict_proba(X_eta if 'eta' in key else X)[:,1])
 
                 # Combine all preditions into ensemble features
                 ensemble_features = np.column_stack(tree_predictions)
@@ -90,7 +114,7 @@ def plots(signal_cols, bkg_cols, models):
                 xgb_model = xgb.XGBClassifier()
                 xgb_model.load_model(model_file)
                 with time_and_log(f'Calculating xgboost scores for {key}...'):
-                    scores[key] = xgb_model.predict_proba(ensemble_features[:,1])
+                    scores[key] = xgb_model.predict_proba(ensemble_features)[:,1]
     
             else:
                 xgb_model = xgb.XGBClassifier()
@@ -128,8 +152,10 @@ def plots(signal_cols, bkg_cols, models):
     if len(scores) <= 10: ax.legend(loc='lower right')
     ax.set_xlabel('bkg eff')
     ax.set_ylabel('sig eff')
-    plt.savefig('plots/roc.png', bbox_inches='tight')
-    imgcat('plots/roc.png')
+    if mz != None:
+        plt.savefig('plots/mz_' + str(mz) + '_roc.png', bbox_inches='tight')
+    else :
+        plt.savefig('plots/roc.png', bbox_inches='tight')
     plt.close()
 
     if len(scores) > 10:

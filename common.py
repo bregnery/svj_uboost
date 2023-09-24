@@ -484,6 +484,117 @@ def columns_to_numpy_for_training(
     y = np.concatenate(y)
     return X, y, weight
 
+def columns_to_numpy_for_iter_training(
+    signal_cols, qcd_cols, tt_cols, features,
+    weight_key='weight',
+    mt_high=650, mt_low=180
+    ):
+    """
+    Takes a list of signal and background Column instances, and outputs
+    a numpy array with `features` as the columns.
+    Ensures that ttjets and qcd are normalized to the same number when making weights
+    """
+    X = []
+    y = []
+    bkg_weight = []
+    qcd_weight = []
+    signal_weight = []
+
+    # user defined normalization value
+    k = 1000000.0
+
+    # make sure that the masses don't go outside the 'full' window
+    if mt_high > 650: mt_high = 650
+    if mt_low < 180: mt_low = 180
+
+    # Make the tt weight for the full mt range
+    full_tt_weight = []
+    tt_masses = []
+    for cols in tt_cols:
+
+        # Apply the mt window
+        mtwind = mt_wind(cols, 650.0, 180.0)
+
+        # make sure pile up weights are applied
+        this_mass = cols.arrays['mt'][mtwind]
+        if weight_key == 'weight' :
+            this_weight = cols.arrays['puweight'][mtwind]*cols.arrays['weight'][mtwind]
+        else :
+            this_weight = cols.arrays[weight_key][mtwind]
+
+        tt_masses.append(this_mass)
+        full_tt_weight.append(this_weight)
+
+    # Normalize the tt weights to k where k is user input
+    tt_masses = np.concatenate(tt_masses)
+    full_tt_weight = np.concatenate(full_tt_weight)
+    total_weight = sum(full_tt_weight)
+    full_tt_weight = [weight * (k / total_weight) for weight in full_tt_weight]
+
+    #print("full tt weight", full_tt_weight)
+
+    # Get the features for the bkg samples
+    for cols in tt_cols:
+
+        # Apply the mt window
+        mtwind = mt_wind(cols, mt_high, mt_low)
+        this_X = cols.to_numpy(features)[mtwind]
+        X.append(this_X)
+        y.append(np.zeros(len(this_X)))
+
+    tt = np.concatenate(X)
+
+    # concatenate the QCD weights then prepare to add tt weights
+    # while ensuring that the QCD weights are weighted to k where k is user input
+    full_tt_weight = np.array(full_tt_weight)
+    tt_mask = (tt_masses > mt_low) & (tt_masses < mt_high)
+    bkg_weight = full_tt_weight[tt_mask]
+
+    # Get the features for the bkg samples
+    for cols in qcd_cols:
+
+        # Apply the mt window
+        mtwind = mt_wind(cols, mt_high, mt_low)
+        this_X = cols.to_numpy(features)[mtwind]
+
+        # make sure pile up weights are applied
+        if weight_key == 'weight' :
+            this_weight = cols.arrays['puweight'][mtwind]*cols.arrays['weight'][mtwind]
+        else :
+            this_weight = cols.arrays[weight_key][mtwind]
+
+        X.append(this_X)
+        qcd_weight.append(this_weight)
+        y.append(np.zeros(len(this_X)))
+
+    # concatenate the QCD weights then prepare to append them to the tt weights
+    # while ensuring that QCD is weighted so that it i equal to the tt sample
+    qcd_weight = np.concatenate(qcd_weight)
+    qcd_weight *= np.sum(bkg_weight) / np.sum(qcd_weight) # not sure if necessary INVESTIGATE
+    bkg_weight = np.concatenate((bkg_weight, qcd_weight))
+
+    # Get the features for the signal samples
+    for cols in signal_cols:
+        sigmtwind = mt_wind(cols, mt_high, mt_low)
+        X.append(cols.to_numpy(features)[sigmtwind])
+        len_sig_cols=len(cols.arrays[features[0]][sigmtwind])
+        y.append(np.ones(len_sig_cols))
+        # All signal model parameter variations should get equal weight,
+        # but some signal samples have more events.
+        # Use 1/n_events as a weight per event.
+        signal_weight.append((1./len_sig_cols)*np.ones(len_sig_cols))
+    
+    signal_weight = np.concatenate(signal_weight)
+    # Set total signal weight equal to total bkg weight
+    signal_weight *= np.sum(bkg_weight) / np.sum(signal_weight)
+    weight = np.concatenate((bkg_weight, signal_weight))
+
+    #print("resulting weights", weight)
+
+    X = np.concatenate(X)
+    y = np.concatenate(y)
+    return X, y, weight
+
 def columns_to_numpy_one_bkg(
     signal_cols, bkg_cols, features,
     downsample=.4, weight_key='weight',
