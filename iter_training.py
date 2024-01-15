@@ -3,6 +3,7 @@ from time import strftime
 
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 np.random.seed(1001)
 
@@ -322,7 +323,30 @@ def main():
             # fit once per signal mass window on limited signal masses,
             # then perform a training on the full window
             outfile = strftime('models/svjbdt_%b%d_allsignals_iterative_qcdttjets.json')
-            mz_prime = [200, 250, 300, 350, 400, 450, 500, 550]
+            mz_prime = [200, 250, 300, 350, 400, 450, 500, 550,
+                        200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550,
+                        #200, 250, 300, 350, 400, 450, 500, 550
+                        ]
+
+            random.shuffle(mz_prime)
+            print("training order: ", mz_prime)
 
             if args.use_eta: outfile = outfile.replace('.json', '_eta.json')
             if args.tag: outfile = outfile.replace('.json', f'_{args.tag}.json')
@@ -349,7 +373,7 @@ def main():
  
                 # Apply mass window
                 X, y, weight = columns_to_numpy_for_iter_training(
-                    signal_cols, qcd_cols, tt_cols, training_features,
+                    signal_cols, qcd_cols, tt_cols, training_features, downsample=0.1,
                     mt_high = mt_window[1], mt_low = mt_window[0]
                     )
  
