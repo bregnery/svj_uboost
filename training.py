@@ -182,7 +182,9 @@ def main():
 
     logger.info(f'Running training script; args={args}')
 
-    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
+    # Load signals only for Z' masses less than 400 GeV
+    signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz[1-3][0-9][0-9]*.npz')]
+    #signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*.npz')]
     tt_cols  = [Columns.load(f) for f in glob.glob(DATADIR+'/train_bkg/Summer20UL18/TTJets_*.npz') ]
     qcd_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_bkg/Summer20UL18/QCD_*.npz') ]
     #bkg_cols = [ qcd_cols + tt_cols]

@@ -299,7 +299,7 @@ def main():
 
             # Get samples using the new 'reweight' key (instead of the default 'weight')
             X, y, weight = columns_to_numpy_iter_one_bkg(
-                signal_cols, qcd_cols, training_features,
+                signal_cols, tt_cols, training_features,
                 weight_key='reweight'
                 )
 #            X, y, weight = columns_to_numpy_for_iter_training(
@@ -328,30 +328,9 @@ def main():
             # fit once per signal mass window on limited signal masses,
             # then perform a training on the full window
             #outfile = strftime('models/svjbdt_%b%d_allsignals_iterative_qcdttjets.json')
-            outfile = strftime('models/svjbdt_%b%d_lowmass_iterative_qcdonly.json')
-            mz_prime = [200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
+            outfile = strftime('models/svjbdt_%b%d_lowmass_iterative_ttonly.json')
+            mz_prime = [200, 250, 300, 350, 
+                        200, 250, 300, 350, 
                         #200, 250, 300, 350, 400, 450, 500, 550,
                         #200, 250, 300, 350, 400, 450, 500, 550,
                         #200, 250, 300, 350, 400, 450, 500, 550,
@@ -400,7 +379,7 @@ def main():
  
                 # Apply mass window
                 X, y, weight = columns_to_numpy_iter_one_bkg(
-                    signal_cols, qcd_cols, training_features, #downsample=0.1,
+                    signal_cols, tt_cols, training_features, #downsample=0.1,
                     mt_high = mt_window[1], mt_low = mt_window[0]
                     )
                 #X, y, weight = columns_to_numpy_for_iter_training(
