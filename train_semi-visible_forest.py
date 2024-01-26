@@ -3,10 +3,11 @@ from time import strftime
 
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 np.random.seed(1001)
 
-from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy_for_training, columns_to_numpy_one_bkg, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
+from common import logger, DATADIR, Columns, time_and_log, columns_to_numpy, columns_to_numpy_for_iter_training, columns_to_numpy_iter_one_bkg, set_matplotlib_fontsizes, imgcat, add_key_value_to_json, filter_pt, mt_wind
 
 # Training features
 training_features = [
@@ -19,17 +20,17 @@ all_features = training_features + ['rho']
 # Parameters for 'weak' BDT models 
 # i.e. models on individual Z' mass points
 # note: eta is learning rate
-#weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
-weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
+weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+#weak_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 # Parameters  for 'strong' BDT models
 # i.e. models on the full mT window
-#strong_params = dict( eta=0.30, min_child_weight=0.1, max_depth=8, subsample=1.0, n_estimators=850)
-strong_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
+strong_params = dict( eta=0.30, min_child_weight=0.1, max_depth=8, subsample=1.0, n_estimators=850)
+#strong_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 # Parameters for the ensembled BDT
-#ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
-ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
+ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=6, subsample=1.0, n_estimators=400)
+#ensem_params = dict( eta=0.05, min_child_weight=0.1, max_depth=2, subsample=1.0, n_estimators=100)
 
 
 def print_weight_table(bkg_cols, signal_cols, weight_col='weight'):
@@ -176,9 +177,8 @@ def main():
 
         # Start with signal vs QCD 
         # Apply mass window
-        X, y, weight = columns_to_numpy_one_bkg(
+        X, y, weight = columns_to_numpy_iter_one_bkg(
             signal_cols, qcd_cols, training_features,
-            downsample=args.downsample,
             mt_high = mt_window[1], mt_low = mt_window[0]
             )
  
@@ -193,9 +193,8 @@ def main():
 
         # Now train with signal vs tt
         # Apply mass window
-        X, y, weight = columns_to_numpy_one_bkg(
+        X, y, weight = columns_to_numpy_iter_one_bkg(
             signal_cols, tt_cols, training_features,
-            downsample=args.downsample,
             mt_high = mt_window[1], mt_low = mt_window[0]
             )
  
@@ -217,9 +216,8 @@ def main():
     full_qcd_model = xgb.XGBClassifier(use_label_encoder=False, **strong_params)
 
     # Apply full mass window (180 to 650)
-    X, y, weight = columns_to_numpy_one_bkg(
+    X, y, weight = columns_to_numpy_iter_one_bkg(
         signal_cols, qcd_cols, training_features,
-        downsample=args.downsample,
         )
 
     # fit over the full window (180 to 650)
@@ -234,9 +232,8 @@ def main():
     full_tt_model = xgb.XGBClassifier(use_label_encoder=False, **strong_params)
 
     # Apply full mass window (180 to 650)
-    X, y, weight = columns_to_numpy_one_bkg(
+    X, y, weight = columns_to_numpy_iter_one_bkg(
         signal_cols, tt_cols, training_features,
-        downsample=args.downsample,
         )
 
     # fit over the full window (180 to 650)
@@ -246,32 +243,75 @@ def main():
     # Add model to the dictionary 
     tt_models.update({"sig_tt_180_to_650" : full_tt_model})
 
-    # Now ensemble everything together
-
-    # Apply full mass window (180 to 650)
-    X, y, weight = columns_to_numpy_for_training(
-        signal_cols, qcd_cols, tt_cols, training_features,
+    # Now train one tree using proper weights
+    normal_weights_model = xgb.XGBClassifier(use_label_encoder=False, **strong_params)
+    X, y, weight = columns_to_numpy(
+        signal_cols, qcd_cols + tt_cols, training_features,
         downsample=args.downsample,
         )
+    with time_and_log(f'Begin training, signal vs tt model on 180 to 650 window. This can take a while...'):
+        normal_weights_model.fit(X, y, sample_weight=weight)
+    tt_models.update({"normal_weights_model" : normal_weights_model})
 
-    # Evaluate all models
-    predictions = []
-    prediction_names = []
-    models = {**qcd_models, **tt_models} # Models will always need to be evaluated in this order
-    for name, model in models.items():
-        predictions.append(model.predict_proba(X)[:, 1] )
-        prediction_names.append(name)
 
-    # Combine all preditions into training features
-    ensemble_features = np.column_stack(predictions)
-
+    # Now ensemble everything together
+    # And train the forest iteratively
     # The ensemble model settings
     ensemble_model = xgb.XGBClassifier(use_label_encoder=False, **ensem_params)
 
-    # Train ensembled model
-    # over the full window (180 to 650)
-    with time_and_log(f'Begin training ensembled model. This can take a while...'):
-        ensemble_model.fit(ensemble_features, y, sample_weight=weight)
+    # Z prime masses for iteration
+    mz_prime = [200, 250, 300, 350, 400, 450, 500, 550,
+                200, 250, 300, 350, 400, 450, 500, 550]
+
+    random.shuffle(mz_prime)
+    print("training order: ", mz_prime)
+
+    # loop over the signal Z' masses
+    nLoops = 0 # monitor the number of loops for the training
+    for mz in mz_prime :
+        # define mass window
+        mt_window = [mz - 100, mz + 100] 
+        
+        # grab corresponding signal files
+        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz' + str(mz) + '*.npz')]
+ 
+        # dark options need to be updated
+        if args.mdark:
+            signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mdark'+args.mdark+'*.npz')]
+        if args.rinv:
+            signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*rinv'+args.rinv+'*.npz')]
+        print_weight_table(bkg_cols, signal_cols, 'weight')
+ 
+        # Apply mass window
+        X, y, weight = columns_to_numpy_for_iter_training(
+            signal_cols, qcd_cols, tt_cols, training_features,
+            mt_high = mt_window[1], mt_low = mt_window[0]
+            )
+ 
+        logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
+ 
+        # Evaluate all models
+        predictions = []
+        prediction_names = []
+        models = {**qcd_models, **tt_models} # Models will always need to be evaluated in this order
+        for name, model in models.items():
+            predictions.append(model.predict_proba(X)[:, 1] )
+            prediction_names.append(name)
+ 
+        # Combine all preditions into training features
+        ensemble_features = np.column_stack(predictions)
+
+        # fit once per signal mass window on limited signal masses,
+        # Train ensembled model
+        # over the full window (180 to 650)
+        with time_and_log(f'Begin training ensembled model. This can take a while...'):
+            if nLoops == 0 :
+                ensemble_model.fit(ensemble_features, y, sample_weight=weight)
+            else :
+                ensemble_model.fit(ensemble_features, y, sample_weight=weight, xgb_model=ensemble_model)
+
+        # count loop number
+        nLoops += 1
 
     # save json output files of each model
     if not osp.isdir('models'): os.makedirs('models')

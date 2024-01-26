@@ -31,9 +31,11 @@ def main():
               #'rinv 0.3 only'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
               #'iterative w/out full window' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
               #'iterative w/ full window' : '../models/svjbdt_Aug06_allsignals_iterative_qcdttjets.json',
-              'iterative w/ normal weights' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
+              #'iterative w/ normal weights' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
+              'iterative QCD only' : 'models/svjbdt_Jan22_allsignals_iterative_qcdonly.json',
+              'iterative tt only' : 'models/svjbdt_Jan22_allsignals_iterative_ttonly.json',
               'iterative w/ scaled weights' : 'models/svjbdt_Sep06_allsignals_iterative_qcdttjets.json',
-              'normal with weights scaled' : 'models/svjbdt_Aug28_allsignals_qcdttjets.json'
+              'normal with weights scaled' : 'models/svjbdt_Sep09_allsignals_qcdttjets.json'
              }
     
     # Loop over Z' mass windows of +/- 100 GeV 
