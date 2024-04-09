@@ -47,6 +47,9 @@ def rhoddt_windowcuts(mt, pt, rho):
 def varmap(mt, pt, rho, var, weight, percent):
     cuts = rhoddt_windowcuts(mt, pt, rho)
     C, RHO_edges, PT_edges = np.histogram2d(rho[cuts], pt[cuts], bins=49,weights=weight[cuts])
+
+
+    
     w, h = 50, 50
     VAR_map      = [[0 for x in range(w)] for y in range(h)]
     VAR = var[cuts]
@@ -62,7 +65,7 @@ def varmap(mt, pt, rho, var, weight, percent):
     return VAR_map_smooth, RHO_edges, PT_edges
 
 # This is the actual DDT function which returns the DDT corrected version of the BDT discriminator
-def ddt(mt, pt, rho, var_map, var, weight, percent):
+def ddt(mt, pt, rho, var_map, var, weight, percent, bdt_cut): #percent is the background efficiency  
     with time_and_log(f'Calculating ddt scores for ...{percent}'):
         cuts = rhoddt_windowcuts(mt, pt, rho)
         var_map_smooth, RHO_edges, PT_edges = varmap(mt, pt, rho, var_map, weight, percent)
@@ -80,7 +83,17 @@ def ddt(mt, pt, rho, var_map, var, weight, percent):
         rhobin = np.clip(1 + rhobin_float.astype(int),0, nbins)
 
         varDDT = np.array([var[i] - var_map_smooth[rhobin[i]-1][ptbin[i]-1] for i in range(len(var))])
-        return varDDT
+        # Plot 2D map for rho-phi plane for each BDT cut
+        plt.figure(figsize=(8, 6))
+        plt.imshow(var_map_smooth.T, extent=[RHO_edges[0], RHO_edges[-1], PT_edges[0], PT_edges[-1]], aspect='auto', origin='lower', cmap='viridis')
+        plt.colorbar(label='DDT')
+        plt.title(f'BDT Cut {bdt_cut}')
+        plt.xlabel('rho')
+        plt.ylabel('pT')
+        plt.tight_layout()
+        plt.savefig(f'2D_map_cut_{bdt_cut}.png')  # Save the plot
+
+        return varDDT #, var_map_smooth
         #return varDDT, rhobin, ptbin, var_map_smooth, RHO_edges, PT_edges
 
 #------------------------------------------------------------------------------
@@ -131,17 +144,66 @@ def main():
 
     bkg_eff=[]
     bkg_Hist={}
-    for i in range(0,10):
+    bdt_cuts=[]
+    for i in range(0,10): # corresponding to BDT cuts of 0.0, 0.1, 0.2, ...., 0.9, 1.0
         bkg_Hist[i]=np.histogram(bkg_score[bkg_score>i/10],weights=bkg_weight[bkg_score>i/10]*len(bkg_score))
         bkg_eff.append(sum(bkg_Hist[i][0])/sum(bkg_Hist[0][0]))
+        bdt_cuts.append(i/10)
 
     # _____________________________________________
     # Apply the DDT 
 
     BKG_score_ddt = []
-    for cuts in (-1,0,1,2,3,4,5):
-        index = int(cuts) + 1
-        BKG_score_ddt.append(ddt(mT, pT, rho, bkg_score, bkg_score, bkg_weight, bkg_eff[index]*100) )
+    var_map_smooth = []
+    for index in range(0,6):
+        BKG_score_ddt.append(ddt(mT, pT, rho, bkg_score, bkg_score, bkg_weight, bkg_eff[index]*100, bdt_cuts[index]) )
+        #score, var_map = ddt(mT, pT, rho, bkg_score, bkg_score, bkg_weight, bkg_eff[index]*100) 
+        #BKG_score_ddt.append(score)
+        #var_map_smooth.append(var_map)
+
+    # Plot histograms for the DDT scores for different BDT cuts
+    fig, ax = plt.subplots(figsize=(10, 8))
+    for cuts, scores in zip(bdt_cuts, BKG_score_ddt):
+        if cuts != 0.4: alpha = 0.3
+        else: alpha = 1.0
+        ax.hist(scores, bins=50, range=(-1.0, 1.0), alpha=alpha, histtype='step', label=f'BDT Cut {cuts}')
+    ax.set_title('DDT Score Distribution for Different Cuts')
+    ax.set_xlabel('BKG_score_ddt')
+    ax.set_ylabel('Events')
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig('DDT_score.png')
+
+    # Apply DDT > 0.0 for the different BDT score transformations
+    fig, ax = plt.subplots(figsize=(10, 8))
+    for cuts, scores in zip(bdt_cuts, BKG_score_ddt):
+        score_mask = scores > 0.0 # DDT score > 0.0 is equivalent to BDT score about BDT cut value
+        ax.hist(mT[score_mask], bins=50, range=(180,650), histtype='step', label=f'DDT(BDT cut = {cuts})')
+
+    ax.set_title('mT for Different DDT(BDT) Thresholds')
+    ax.set_xlabel('mT')
+    ax.set_ylabel('Events')
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig('bkg_events_vs_mT.png')
+    
+    # log scale it
+    ax.set_yscale('log')
+    plt.tight_layout()
+    plt.savefig('log_bkg_events_vs_mT.png')
+
+    # Do it again normalized to unit area
+    fig, ax = plt.subplots(figsize=(10, 8))
+    for cuts, scores in zip(bdt_cuts, BKG_score_ddt):
+        score_mask = scores > 0.0 # DDT score > 0.0 is equivalent to BDT score about BDT cut value
+        ax.hist(mT[score_mask], bins=50, range=(180,650), histtype='step', label=f'DDT(BDT cut = {cuts})', density=True)
+
+    ax.set_title('mT for Different DDT(BDT) Thresholds')
+    ax.set_xlabel('mT')
+    ax.set_ylabel('Events')
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig('norm_bkg_events_vs_mT.png')
 
     print(BKG_score_ddt) 
 
