@@ -8,12 +8,16 @@ import xgboost as xgb
 import matplotlib
 matplotlib.use('Agg') # prevents opening displays (fast), must use before pyplot
 import matplotlib.pyplot as plt
+import mplhep as hep
+hep.style.use("CMS") # CMS plot style
 
 # Load the trained model from a saved file
 #model = xgb.Booster()  # Create a blank model
 model = xgb.XGBClassifier()  # Create a blank model
 #model.load_model('../models/svjbdt_Aug01_allsignals_qcdttjets.json')  # Load the saved model
-model.load_model('models/svjbdt_Nov08_allsignals_iterative_qcdttjets.json')  # Load the saved model
+#model.load_model('models/svjbdt_Nov08_allsignals_iterative_qcdttjets.json')  # Load the saved model
+#model.load_model('models/svjbdt_Nov08_allsignals_iterative_qcdttjets.json')  # Load the saved model
+model.load_model('models/svjbdt_Feb28_lowmass_iterative_qcdtt_100p38.json')  # Load the saved model
 
 # Define the training features list
 training_features = [
@@ -50,9 +54,10 @@ plt.barh(range(len(sorted_features)), sorted_importance_values, align='center')
 plt.yticks(range(len(sorted_features)), sorted_features)
 plt.xlabel('Importance')
 plt.ylabel('Feature')
-plt.title('Feature Importance')
+#plt.title('Feature Importance')
 
-
+# Options to make the plot fancier 
+hep.cms.label(rlabel="2018 (13 TeV)")
 
 # Plot feature importance
 #xgb.plot_importance(model)
@@ -60,6 +65,7 @@ plt.title('Feature Importance')
 #plt.yticks(range(len(training_features)), sorted_features)  # Set y-axis labels
 #plt.yticks(range(len(training_features)), sorted_features)  # Set y-axis labels
 plt.savefig("plots/feature_importance.png", bbox_inches='tight', pad_inches=1.0)
+plt.savefig("plots/feature_importance.pdf", bbox_inches='tight', pad_inches=1.0)
 
 
 

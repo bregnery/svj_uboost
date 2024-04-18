@@ -10,6 +10,9 @@ np.random.seed(1001)
 
 from common import logger, DATADIR, Columns, time_and_log, imgcat, set_matplotlib_fontsizes, columns_to_numpy
 
+import mplhep as hep
+hep.style.use("CMS") # CMS plot style
+
 
 training_features = [
     'girth', 'ptd', 'axismajor', 'axisminor',
@@ -27,15 +30,16 @@ def main():
     ttjets_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_bkg/Summer20UL18/TTJets_*.npz')]
     bkg_cols = qcd_cols + ttjets_cols
 
-    models = {'normal full window'    : '../models/svjbdt_Aug01_allsignals_qcdttjets.json',
+    models = {#'normal full window'    : '../models/svjbdt_Aug01_allsignals_qcdttjets.json',
               #'rinv 0.3 only'    : 'models/svjbdt_Jul20_allsignals_qcdttjets.json',
               #'iterative w/out full window' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
               #'iterative w/ full window' : '../models/svjbdt_Aug06_allsignals_iterative_qcdttjets.json',
               #'iterative w/ normal weights' : '../models/svjbdt_Aug04_allsignals_iterative_qcdttjets.json',
-              'iterative QCD only' : 'models/svjbdt_Jan22_allsignals_iterative_qcdonly.json',
-              'iterative tt only' : 'models/svjbdt_Jan22_allsignals_iterative_ttonly.json',
-              'iterative w/ scaled weights' : 'models/svjbdt_Sep06_allsignals_iterative_qcdttjets.json',
-              'normal with weights scaled' : 'models/svjbdt_Sep09_allsignals_qcdttjets.json'
+              #'iterative QCD only' : 'models/svjbdt_Jan22_allsignals_iterative_qcdonly.json',
+              #'iterative tt only' : 'models/svjbdt_Jan22_allsignals_iterative_ttonly.json',
+              #'iterative w/ scaled weights' : 'models/svjbdt_Sep06_allsignals_iterative_qcdttjets.json',
+              #'normal with weights scaled' : 'models/svjbdt_Sep09_allsignals_qcdttjets.json'
+              'Model for OR' : 'models/svjbdt_Feb28_lowmass_iterative_qcdtt_100p38.json'
              }
     
     # Loop over Z' mass windows of +/- 100 GeV 
@@ -46,8 +50,9 @@ def main():
         mt_window = [mz - 100, mz + 100]
         #mt_window = [180, 650]
 
-        # grab correct signal files
-        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*mz' + str(mz) + '*.npz')]
+        # grab correct signal files 
+        signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*mz' + str(mz) + '*rinv0.3*.npz')]
+        #signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/test_signal/*mz' + str(mz) + '*.npz')]
 
         # make plots using the mt window
         plots(signal_cols, bkg_cols, models, mz, mt_window)
@@ -104,8 +109,20 @@ def plots(signal_cols, bkg_cols, models, mz, mt_window):
             eff_bkg, eff_sig,
             label=f'{key} (auc={aucs[key]:.3f})'
             )
+        # Add point for  BDT cut
+        cut_index = np.where(cuts < 0.5)[0][0]
+        print(cut_index)
+        #ax.text( eff_sig[cut_index], eff_bkg[cut_index], 'BDT > 0.5' )
+        ax.text( eff_bkg[cut_index] + 0.05, eff_sig[cut_index] - 0.02, 'BDT > 0.5' )
+        ax.text( 0.4, 0, "m(Z')=" + str(mz) + ' rinv = 0.3')
+        ax.scatter(eff_bkg[cut_index], eff_sig[cut_index], color='red')
 
-    if len(scores) <= 10: ax.legend(loc='lower right')
+    # plot legend for graphs with more than one BDT
+    if len(scores) <= 10 and len(scores) > 1 : ax.legend(loc='lower right')
+
+    # Options to make the plot fancier 
+    hep.cms.label(rlabel="2018 (13 TeV)")
+
     ax.set_xlabel('bkg eff')
     ax.set_ylabel('sig eff')
     plt.savefig('plots/mz_' + str(mz) + '_roc.png', bbox_inches='tight')
