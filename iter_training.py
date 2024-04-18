@@ -269,7 +269,9 @@ def main():
         logger.warning(f'Using the following hyperparameters:\n{pprint.pformat(parameters)}')
 
         import xgboost as xgb
-        model = xgb.XGBClassifier(use_label_encoder=False, **parameters)
+        model = xgb.XGBClassifier(booster='gbtree', use_label_encoder=False, **parameters)
+        #model = xgb.XGBClassifier(use_label_encoder=False, **parameters)
+        #xgb.set_config(process_type='update') # this prevents the iterative training from adding more trees each time fit is called
 
         if args.reweight:
             signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz550*.npz')]
@@ -320,8 +322,8 @@ def main():
             #with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
             #    model.fit(X, y, sample_weight=weight)
  
-            with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
-                model.fit(X, y, sample_weight=weight)
+            #with time_and_log(f'Begin training, dst={outfile}. This can take a while...'):
+            #    model.fit(X, y, sample_weight=weight) #, process_type='update')
         else:
 
             # Perform an iterative training, reweighting not yet available
@@ -329,50 +331,18 @@ def main():
             # then perform a training on the full window
             #outfile = strftime('models/svjbdt_%b%d_allsignals_iterative_qcdttjets.json')
             outfile = strftime('models/svjbdt_%b%d_lowmass_iterative_qcdonly.json')
-            mz_prime = [200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        200, 250, 300, 350,  
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550,
-                        #200, 250, 300, 350, 400, 450, 500, 550
-                        ]
-
+            #mz_prime = np.array([200, 250, 300, 350])
+            #mz_prime = np.array([200, 250, 300, 350, 400, 450, 500, 550])
+            mz_prime = np.array([200, 250, 300, 350])
+            mz_prime = np.repeat(mz_prime, 5)
             random.shuffle(mz_prime)
+            mz_all = np.array([200, 250, 300, 350, 400, 450, 500, 550])
+            mz_all = np.repeat(mz_all, 5)
+            random.shuffle(mz_all)
+            mz_prime = np.concatenate((mz_prime, mz_all))
+            #mz_prime = np.repeat(mz_prime, 250)
+            #mz_prime = np.repeat(mz_prime, 5)
+
             print("training order: ", mz_prime)
 
             if args.use_eta: outfile = outfile.replace('.json', '_eta.json')
@@ -389,7 +359,8 @@ def main():
                 mt_window = [mz - 100, mz + 100] 
                 
                 # grab corresponding signal files
-                signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz' + str(mz) + '*.npz')]
+                #signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz' + str(mz) + '*.npz')]
+                signal_cols = [Columns.load(f) for f in glob.glob(DATADIR+'/train_signal/*mz' + str(mz) + '*rinv0.3*.npz')]
  
                 # dark options need to be updated
                 if args.mdark:
@@ -399,14 +370,14 @@ def main():
                 print_weight_table(bkg_cols, signal_cols, 'weight')
  
                 # Apply mass window
-                X, y, weight = columns_to_numpy_iter_one_bkg(
-                    signal_cols, qcd_cols, training_features, #downsample=0.1,
-                    mt_high = mt_window[1], mt_low = mt_window[0]
-                    )
-                #X, y, weight = columns_to_numpy_for_iter_training(
-                #    signal_cols, qcd_cols, tt_cols, training_features, downsample=0.1,
+                #X, y, weight = columns_to_numpy_iter_one_bkg(
+                #    signal_cols, qcd_cols, training_features, #downsample=0.1,
                 #    mt_high = mt_window[1], mt_low = mt_window[0]
                 #    )
+                X, y, weight = columns_to_numpy_for_iter_training(
+                    signal_cols, qcd_cols, tt_cols, training_features, downsample=0.1,
+                    mt_high = mt_window[1], mt_low = mt_window[0]
+                    )
  
                 logger.info(f'Using {len(y)} events ({np.sum(y==1)} signal events, {np.sum(y==0)} bkg events)')
  
@@ -415,7 +386,30 @@ def main():
                     if nLoops == 0 :
                         model.fit(X, y, sample_weight=weight)
                     else :
-                        model.fit(X, y, sample_weight=weight, xgb_model=model)
+                        # Convert the data to DMatrix format
+                        dtrain = xgb.DMatrix(X, label=y, weight=weight)
+     
+                        # Retrieve the parameters from the model
+                        params = model.get_params()
+                        
+                        # Perform the next training iteration
+                        # Since we're not adding new trees, we pass an empty dictionary for the parameters
+                        updated_model = xgb.train(
+                            params,
+                            dtrain,
+                            #num_boost_round=0,
+                            #num_boost_round=38,
+                            num_boost_round=20,
+                            #num_boost_round=1,
+                            xgb_model=model.get_booster()  # Pass the existing booster to continue training
+                        )
+                        
+                        # Set the updated booster back to the XGBClassifier
+                        model._Booster = updated_model
+
+                        #model.set_params(process_type='update', updater='refresh ') #, num_boost_round=0)
+                        #model.fit(X, y, sample_weight=weight, xgb_model=model, num_boost_round=0)#, process_type='update')
+                        #model.fit(X, y, sample_weight=weight, xgb_model=model.get_booster() )#, process_type='update')
 
                 # count loop number
                 nLoops += 1
