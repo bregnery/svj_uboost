@@ -45,8 +45,9 @@ def main():
     #models = {'TTJets_only'    : 'models/svjbdt_Aug21_allsignals_qcdttjets.json'}
     #models = {'TTJets_only'    : 'models/svjbdt_Aug21_allsignals_ttjets.json'}
     #models = {'TT=QCD=1 iter'    : 'models/svjbdt_Sep05_allsignals_iterative_qcdttjets.json'}
-    models = {'TT=QCD=1'    : 'models/svjbdt_Sep09_allsignals_qcdttjets.json'}
-
+    #models = {'TT=QCD=1'    : 'models/svjbdt_Sep09_allsignals_qcdttjets.json'}
+    #models = {'QCD < 400 Many iterations'    : 'models/svjbdt_Jan31_lowmass_iterative_qcdonly.json'}
+    models = {'100+38 est/iter QCD+tt < 400'    : 'models/svjbdt_Feb28_lowmass_iterative_qcdtt_100p38.json'}
     plots(signal_cols, bkg_cols, models)
 
 

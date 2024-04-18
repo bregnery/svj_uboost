@@ -1127,7 +1127,7 @@ def columns_to_numpy(
     return X, y, weight
 
 def columns_to_numpy_single(
-    cols, features,
+    cols, features, weight_key='weight',
     mt_high=650, mt_low=180
     ):
     """
@@ -1135,6 +1135,7 @@ def columns_to_numpy_single(
     a numpy array with `features` as the columns.
     """
     X = []
+    weight = []
 
     # Get the features for the bkg samples
     for col in cols:
@@ -1144,8 +1145,17 @@ def columns_to_numpy_single(
         this_X = col.to_numpy(features)[mtwind]
         X.append(this_X)
 
+        # make sure pile up weights are applied
+        if weight_key == 'weight' :
+            this_weight = col.arrays['puweight'][mtwind]*col.arrays['weight'][mtwind]
+        else :
+            this_weight = col.arrays[weight_key][mtwind]
+        
+        weight.append(this_weight)
+
+    weight = np.concatenate(weight)
     X = np.concatenate(X)
-    return X
+    return X, weight
 
 def add_key_value_to_json(json_file, key, value):
     with open(json_file, 'r') as f:
