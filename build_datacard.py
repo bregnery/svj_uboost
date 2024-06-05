@@ -201,6 +201,10 @@ def skim():
                 # Handle the case where the number following 'bdt=' is not valid
                 raise ValueError("Invalid number {} following 'bdt='.".format(parts[1]))
 
+            # Apply the signal region
+            cols = cols.select(cols.to_numpy(['rt']).ravel() > 1.18)
+            cols.cutflow['rt_signalregion'] = len(cols)
+
             # Grab the input features and weights
             X = []
             weight = []
@@ -448,6 +452,10 @@ def build_bkg_histograms(args=None):
                     # Handle the case where the number following 'bdt=' is not valid
                     raise ValueError("Invalid number {} following 'bdt='.".format(parts[1]))
      
+                # Apply the signal region
+                col = col.select(col.to_numpy(['rt']).ravel() > 1.18)
+                #col.cutflow['rt_signalregion'] = len(col)
+
                 # Grab the input features and weights
                 X = []
                 weight = []
@@ -495,7 +503,7 @@ def build_bkg_histograms(args=None):
         print(cutflow)
         mth = common.MTHistogram(array[:,0], weights=lumi*(col.xs / col.cutflow['raw'])*array[:,1])
         mth.metadata['process'] = process
-        mth.metadata['cutflow'] = cutflow
+        mth.metadata['cutflow'] = ', '.join([f'{k}: {v}' for k, v in cutflow.items()]) # convert dict to string
 
         bkg = [b for b in ['QCD', 'TTJets', 'ZJets', 'WJets'] if b in process][0].lower()
         mths[bkg+'_individual'].append(mth) # Save individual histogram
