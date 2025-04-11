@@ -62,6 +62,9 @@ def parse_arguments():
     # and another common set for plots is [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
     parser.add_argument('--bdt_cuts', nargs='+', type=float, default=[0.0, 0.1, 0.2, 0.3, 0.4, 0.42, 0.45, 0.47, 0.5, 0.52, 0.55, 0.57, 0.6, 0.62, 0.65, 0.67, 0.7, 0.72, 0.75, 0.77, 0.8, 0.82, 0.85, 0.87, 0.9, 0.92, 0.95], help='List of BDT cuts')
 
+    # Choose the cut based search cut values for the ecfm2b1 variable
+    parser.add_argument('--ecf_cuts', nargs='+', type=float, default=[0.09, 0.095, 0.1, 0.105, 0.11, 0.115, 0.12, 0.125], help='List of Cutbased search cuts')
+
     # Allowed plots: 2D DDT maps, Background Scores vs MT, FOM significance,
     #                Signal mt spectrums for one BDT working point,  one signal mt spectrum for many BDT working points
     allowed_plots = ['2D_DDT_map', 'bkg_scores_mt', 'fom_significance', 'sig_mt_single_BDT', 'one_sig_mt_many_bdt']
@@ -155,13 +158,11 @@ def main():
     lumi = args.lumi
     sig_bdt_cut = args.sig_bdt_cut
     bdt_cuts = args.bdt_cuts
+    ecf_cuts = args.ecf_cuts
     plots = args.plot
     verbosity = args.verbosity
 
     set_mpl_fontsize(18, 22, 26)
-
-
-
 
     #--------------------------------------------------------------------------
     # For the cut-based search ------------------------------------------------
@@ -175,7 +176,7 @@ def main():
             "features": ["ecfm2b1"] + features_common,
             "inputs_to_primary": lambda x: x[:, 0],
             "primary_var_label": "$M_2^{(1)}$ $>$ ",
-            "cut_values": [0.09]
+            "cut_values": ecf_cuts
         },
         "BDT-based": {
             "features": read_training_features(model_file) + features_common,
